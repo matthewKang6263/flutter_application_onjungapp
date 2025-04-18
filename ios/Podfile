@@ -1,4 +1,4 @@
-platform :ios, '18.0' # ← 여기 최신 시뮬레이터 기준으로 올려
+platform :ios, '14.0' # ← 이거 꼭!
 
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
 
@@ -15,7 +15,7 @@ def flutter_root
   end
 
   File.foreach(generated_xcode_build_settings_path) do |line|
-    matches = line.match(/FLUTTER_ROOT\=(.*)/)
+    matches = line.match(/FLUTTER_ROOT=(.*)/)
     return matches[1].strip if matches
   end
   raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Try deleting Generated.xcconfig, then run flutter pub get"
@@ -30,20 +30,38 @@ target 'Runner' do
   use_modular_headers!
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+
   target 'RunnerTests' do
     inherit! :search_paths
   end
 end
 
 post_install do |installer|
+  installer.generated_projects.each do |project|
+    project.targets.each do |target|
+      target.build_configurations.each do |config|
+        config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '14.0'
+      end
+    end
+  end
+
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
 
     target.build_configurations.each do |config|
       config.build_settings['ONLY_ACTIVE_ARCH'] = 'YES'
-      
-      # ✅ Apple Silicon에서 시뮬레이터 빌드 오류 방지
       config.build_settings['EXCLUDED_ARCHS[sdk=iphonesimulator*]'] = 'arm64'
+    end
+
+    # BoringSSL-GRPC 빌드 경고 제거
+    if target.name == 'BoringSSL-GRPC'
+      target.source_build_phase.files.each do |file|
+        if file.settings && file.settings['COMPILER_FLAGS']
+          flags = file.settings['COMPILER_FLAGS'].split
+          flags.reject! { |flag| flag == '-GCC_WARN_INHIBIT_ALL_WARNINGS' }
+          file.settings['COMPILER_FLAGS'] = flags.join(' ')
+        end
+      end
     end
   end
 end
