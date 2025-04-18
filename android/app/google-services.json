@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "712070855152",
+    "project_id": "onjungapp",
+    "storage_bucket": "onjungapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:712070855152:android:cf7eee964e97ed81274535",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_onjungapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyATxM9fXd1oob3gXuwPoOFTJehwwdNjT9k"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

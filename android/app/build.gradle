@@ -1,0 +1,57 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    id "dev.flutter.flutter-gradle-plugin"
+    id "com.google.gms.google-services" // ✅ 여기도 꼭 필요!
+}
+
+android {
+    namespace = "com.example.flutter_application_onjungapp"
+    compileSdk = flutter.compileSdkVersion
+    ndkVersion = flutter.ndkVersion
+
+    defaultConfig {
+        applicationId = "com.example.flutter_application_onjungapp"
+        minSdk = 23
+        multiDexEnabled true
+        targetSdk = flutter.targetSdkVersion
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
+        manifestPlaceholders = [
+            kakaoScheme: "51b0a5c024b1ff7f585b4ee6c4ceaf2d"
+        ]
+    }
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = JavaVersion.VERSION_1_8
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false  // 🔥 Proguard 이슈 회피 테스트용
+            shrinkResources false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig = signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+// ✅ 꼭 맨 아래 줄에 있어야 함
+apply plugin: 'com.google.gms.google-services'
+
+// ✅ 멀티덱스 의존성 추가
+dependencies {
+    implementation 'androidx.multidex:multidex:2.0.1'
+    // ✅ Kakao Auth 라이브러리 명시적 선언 (중요)
+    implementation "com.kakao.sdk:v2-auth:2.18.0"
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+}

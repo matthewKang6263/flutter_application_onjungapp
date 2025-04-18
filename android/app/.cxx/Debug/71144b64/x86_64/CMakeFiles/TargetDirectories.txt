@@ -1,0 +1,2 @@
+/Users/minwookang/Desktop/flutter_application_onjungapp/android/app/.cxx/Debug/71144b64/x86_64/CMakeFiles/edit_cache.dir
+/Users/minwookang/Desktop/flutter_application_onjungapp/android/app/.cxx/Debug/71144b64/x86_64/CMakeFiles/rebuild_cache.dir

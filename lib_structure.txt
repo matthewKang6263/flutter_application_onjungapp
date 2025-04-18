@@ -1,0 +1,28 @@
+lib
+├── components
+├── firebase_options.dart
+├── main.dart
+├── models
+├── pages
+│   ├── calendar_page.dart
+│   ├── friends_page.dart
+│   ├── home_page.dart
+│   ├── login_page.dart
+│   ├── my_events_page
+│   ├── quick_record
+│   │   ├── quick_record_step1.dart
+│   │   ├── quick_record_step2.dart
+│   │   ├── quick_record_step3.dart
+│   │   └── quick_record_wrapper.dart
+│   ├── root_page.dart
+│   ├── search
+│   │   ├── search_person_page.dart
+│   │   └── widgets
+│   │       └── search_result_tile.dart
+│   ├── setting_page.dart
+│   └── splash_page.dart
+├── providers
+├── services
+└── utils
+
+10 directories, 16 files

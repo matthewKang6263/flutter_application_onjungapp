@@ -1,0 +1,43 @@
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "onjungapp",
+          "appId": "1:712070855152:android:cf7eee964e97ed81274535",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "ios": {
+        "default": {
+          "projectId": "onjungapp",
+          "appId": "1:712070855152:ios:ac4ec08cb718370b274535",
+          "uploadDebugSymbols": false,
+          "fileOutput": "ios/Runner/GoogleService-Info.plist"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "onjungapp",
+          "configurations": {
+            "android": "1:712070855152:android:cf7eee964e97ed81274535",
+            "ios": "1:712070855152:ios:ac4ec08cb718370b274535"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ]
+    }
+  ]
+}
