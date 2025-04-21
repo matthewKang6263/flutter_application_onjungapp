@@ -1,57 +1,44 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_application_onjungapp/models/enums/relation_type.dart';
-import 'package:provider/provider.dart';
+// 📁 lib/pages/friends_tab/add_friends/view/direct_add_view.dart
 
+// ignore_for_file: use_build_context_synchronously
+
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_application_onjungapp/components/text_fields/custom_text_field.dart';
+import 'package:flutter_application_onjungapp/components/text_fields/text_field_config.dart';
+import 'package:flutter_application_onjungapp/components/text_fields/text_field_type.dart';
+import 'package:flutter_application_onjungapp/components/buttons/selectable_chip_button.dart';
 import 'package:flutter_application_onjungapp/components/bottom_buttons/bottom_fixed_button_container.dart';
 import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/black_fill_button.dart';
 import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/disabled_button.dart';
-import 'package:flutter_application_onjungapp/components/buttons/selectable_chip_button.dart';
 import 'package:flutter_application_onjungapp/components/custom_snack_bar.dart';
-import 'package:flutter_application_onjungapp/components/text_fields/custom_text_field.dart';
-import 'package:flutter_application_onjungapp/components/text_fields/text_field_type.dart';
-import 'package:flutter_application_onjungapp/components/text_fields/text_field_config.dart';
-import 'package:flutter_application_onjungapp/viewmodels/friends_tab/friend_add_edit_view_model.dart';
+import 'package:flutter_application_onjungapp/viewmodels/friends_tab/add/friend_add_view_model.dart';
+import 'package:flutter_application_onjungapp/models/enums/relation_type.dart';
 
-/// 📋 직접 친구 추가 탭
-class DirectAddView extends StatelessWidget {
+/// 👥 직접 친구 추가 탭
+class DirectAddView extends ConsumerStatefulWidget {
   const DirectAddView({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => FriendAddEditViewModel(),
-      child: const _DirectAddContent(),
-    );
-  }
+  ConsumerState<DirectAddView> createState() => _DirectAddViewState();
 }
 
-class _DirectAddContent extends StatefulWidget {
-  const _DirectAddContent();
-
-  @override
-  State<_DirectAddContent> createState() => _DirectAddContentState();
-}
-
-class _DirectAddContentState extends State<_DirectAddContent> {
-  final FocusNode _nameFocus = FocusNode();
-  final FocusNode _phoneFocus = FocusNode();
-  final FocusNode _memoFocus = FocusNode();
-
-  final List<String> relations = ['가족', '친척', '친구', '지인', '직장', '기타'];
-  final String userId = 'test-user'; // TODO: Replace with actual user ID
+class _DirectAddViewState extends ConsumerState<DirectAddView> {
+  static const String userId = 'test-user'; // TODO: 실제 로그인 UID
 
   @override
   void dispose() {
-    _nameFocus.dispose();
-    _phoneFocus.dispose();
-    _memoFocus.dispose();
-    context.read<FriendAddEditViewModel>().disposeControllers();
+    ref.read(friendAddViewModelProvider.notifier).disposeControllers();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<FriendAddEditViewModel>();
+    final state = ref.watch(friendAddViewModelProvider);
+    final vm = ref.read(friendAddViewModelProvider.notifier);
+
+    // 폼 유효성
+    final isValid = vm.isValid;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -66,80 +53,97 @@ class _DirectAddContentState extends State<_DirectAddContent> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildTitle('이름'),
+                      // 이름
+                      const Text('이름',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 8),
                       CustomTextField(
                         config: TextFieldConfig(
-                          controller: vm.nameController,
-                          focusNode: _nameFocus,
+                          controller: state.nameController,
+                          focusNode:
+                              state.nameController.selection.baseOffset >= 0
+                                  ? FocusNode()
+                                  : FocusNode(),
                           type: TextFieldType.name,
                           isLarge: true,
                           onChanged: (_) => setState(() {}),
-                          onClear: () =>
-                              setState(() => vm.nameController.clear()),
+                          onClear: () => state.nameController.clear(),
                         ),
                       ),
                       const SizedBox(height: 24),
-                      _buildTitle('전화번호'),
+
+                      // 전화번호
+                      const Text('전화번호',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 8),
                       CustomTextField(
                         config: TextFieldConfig(
-                          controller: vm.phoneController,
-                          focusNode: _phoneFocus,
+                          controller: state.phoneController,
+                          focusNode: FocusNode(),
                           type: TextFieldType.phone,
                           isLarge: true,
                           onChanged: (_) => setState(() {}),
-                          onClear: () =>
-                              setState(() => vm.phoneController.clear()),
+                          onClear: () => state.phoneController.clear(),
                         ),
                       ),
                       const SizedBox(height: 24),
-                      _buildTitle('관계'),
+
+                      // 관계
+                      const Text('관계',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 8),
                       Wrap(
                         spacing: 8,
                         runSpacing: 8,
-                        children: relations.map((label) {
-                          return SizedBox(
-                            width: (MediaQuery.of(context).size.width -
-                                    16 * 2 -
-                                    8 * 2) /
-                                3,
-                            child: SelectableChipButton(
-                              label: label,
-                              isSelected: vm.selectedRelation.label == label,
-                              onTap: () => vm.setRelation(
-                                RelationType.values.firstWhere(
-                                  (r) => r.label == label,
-                                  orElse: () => RelationType.etc,
-                                ),
-                              ),
-                            ),
+                        children: RelationType.values
+                            .where((r) => r != RelationType.unset)
+                            .map((type) {
+                          return SelectableChipButton(
+                            label: type.label,
+                            isSelected: state.selectedRelation == type,
+                            onTap: () {
+                              vm.setRelation(type);
+                              setState(() {});
+                            },
                           );
                         }).toList(),
                       ),
                       const SizedBox(height: 24),
-                      _buildTitle('메모'),
+
+                      // 메모
+                      const Text('메모',
+                          style: TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w700)),
+                      const SizedBox(height: 8),
                       CustomTextField(
                         config: TextFieldConfig(
-                          controller: vm.memoController,
-                          focusNode: _memoFocus,
+                          controller: state.memoController,
+                          focusNode: FocusNode(),
                           type: TextFieldType.memo,
                           isLarge: true,
                           onChanged: (_) => setState(() {}),
-                          onClear: () =>
-                              setState(() => vm.memoController.clear()),
+                          onClear: () => state.memoController.clear(),
                         ),
                       ),
                     ],
                   ),
                 ),
               ),
+
+              // 저장 버튼
               BottomFixedButtonContainer(
-                child: vm.isValid
+                child: isValid
                     ? BlackFillButton(
                         text: '완료',
                         onTap: () async {
                           await vm.save(userId);
-                          showOnjungSnackBar(context,
-                              '${vm.nameController.text}님이 친구에 추가되었어요');
+                          showOnjungSnackBar(
+                            context,
+                            '${state.nameController.text}님이 추가되었습니다.',
+                          );
                           vm.clear();
                           setState(() {});
                         },
@@ -150,24 +154,6 @@ class _DirectAddContentState extends State<_DirectAddContent> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildTitle(String title) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: Colors.black,
-            fontFamily: 'Pretendard',
-          ),
-        ),
-        const SizedBox(height: 8),
-      ],
     );
   }
 }

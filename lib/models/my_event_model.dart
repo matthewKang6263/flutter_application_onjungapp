@@ -1,5 +1,10 @@
+// lib/models/my_event_model.dart
+
 import 'package:flutter_application_onjungapp/models/enums/event_type.dart';
 
+/// 🔹 나의 경조사 이벤트 모델
+/// - 하나의 행사(결혼식·돌잔치 등)에 대한 메타데이터와
+///   관련된 상세내역(ID 리스트, 화환친구 리스트 등)를 관리
 class MyEvent {
   final String id;
   final String title;
@@ -23,14 +28,15 @@ class MyEvent {
     required this.flowerFriendNames,
   });
 
-  /// ✅ 수정된 copyWith 메서드 (flowerFriendNames 포함)
+  /// 🔧 일부 필드만 교체해 새 객체 반환 (immutable 패턴)
+  /// - updatedAt은 전달 없을 시 `DateTime.now()` 적용
   MyEvent copyWith({
     String? title,
     EventType? eventType,
     DateTime? date,
     DateTime? updatedAt,
-    List<String>? flowerFriendNames,
     List<String>? recordIds,
+    List<String>? flowerFriendNames,
   }) {
     return MyEvent(
       id: id,
@@ -45,28 +51,36 @@ class MyEvent {
     );
   }
 
-  factory MyEvent.fromMap(Map<String, dynamic> map) => MyEvent(
-        id: map['id'],
-        title: map['title'],
-        eventType:
-            EventType.values.firstWhere((e) => e.name == map['eventType']),
-        date: DateTime.parse(map['date']),
-        createdBy: map['createdBy'],
-        createdAt: DateTime.parse(map['createdAt']),
-        updatedAt: DateTime.parse(map['updatedAt']),
-        recordIds: List<String>.from(map['recordIds']),
-        flowerFriendNames: List<String>.from(map['flowerFriendNames']),
-      );
+  /// 📥 Firestore Map → MyEvent 객체 변환
+  factory MyEvent.fromMap(Map<String, dynamic> map) {
+    return MyEvent(
+      id: map['id'] as String,
+      title: map['title'] as String,
+      eventType: EventType.values.firstWhere(
+        (e) => e.name == map['eventType'],
+        orElse: () => EventType.etc,
+      ),
+      date: DateTime.parse(map['date'] as String),
+      createdBy: map['createdBy'] as String,
+      createdAt: DateTime.parse(map['createdAt'] as String),
+      updatedAt: DateTime.parse(map['updatedAt'] as String),
+      recordIds: List<String>.from(map['recordIds'] as List),
+      flowerFriendNames: List<String>.from(map['flowerFriendNames'] as List),
+    );
+  }
 
-  Map<String, dynamic> toMap() => {
-        'id': id,
-        'title': title,
-        'eventType': eventType.name,
-        'date': date.toIso8601String(),
-        'createdBy': createdBy,
-        'createdAt': createdAt.toIso8601String(),
-        'updatedAt': updatedAt.toIso8601String(),
-        'recordIds': recordIds,
-        'flowerFriendNames': flowerFriendNames,
-      };
+  /// 📤 MyEvent 객체 → Firestore에 저장 가능한 Map 변환
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'eventType': eventType.name,
+      'date': date.toIso8601String(),
+      'createdBy': createdBy,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+      'recordIds': recordIds,
+      'flowerFriendNames': flowerFriendNames,
+    };
+  }
 }

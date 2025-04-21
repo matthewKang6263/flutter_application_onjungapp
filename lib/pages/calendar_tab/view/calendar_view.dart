@@ -1,29 +1,27 @@
+// 📁 lib/pages/calendar_tab/view/calendar_view.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_application_onjungapp/utils/tag_extractor.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_application_onjungapp/components/bottom_sheet/calendar_day_detail_bottom_sheet.dart';
+import 'package:flutter_application_onjungapp/viewmodels/calendar_tab/calendar_tab_view_model.dart';
 import 'package:flutter_application_onjungapp/pages/calendar_tab/widgets/calendar_day_cell.dart';
-import 'package:flutter_application_onjungapp/viewmodels/calendar_tab/calendar_tab_viewmodel.dart';
-import 'package:flutter_application_onjungapp/utils/calendar_utils.dart';
-import 'package:provider/provider.dart';
 
-/// 📆 캘린더 탭 메인 UI
-/// - 선택한 월 기준으로 날짜 셀을 구성하고,
-/// - 날짜 클릭 시 해당 날짜의 기록을 바텀시트로 표시
-class CalendarView extends StatelessWidget {
+/// 📆 달력 뷰
+class CalendarView extends ConsumerWidget {
   final DateTime selectedDate;
-
   const CalendarView({super.key, required this.selectedDate});
 
   @override
-  Widget build(BuildContext context) {
-    final vm = context.watch<CalendarTabViewModel>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final vm = ref.read(calendarTabViewModelProvider.notifier);
 
     final year = selectedDate.year;
     final month = selectedDate.month;
-    final firstDay = DateTime(year, month, 1);
-    final lastDay = DateTime(year, month + 1, 0);
-    final startWeekday = firstDay.weekday % 7;
-    final totalDays = lastDay.day;
-    final totalCells = ((startWeekday + totalDays) / 7).ceil() * 7;
+    final first = DateTime(year, month, 1);
+    final last = DateTime(year, month + 1, 0);
+    final startEmpty = first.weekday % 7;
+    final days = last.day;
+    final totalCells = ((startEmpty + days) / 7).ceil() * 7;
 
     return Column(
       children: [
@@ -31,31 +29,27 @@ class CalendarView extends StatelessWidget {
         Expanded(
           child: SingleChildScrollView(
             child: Column(
-              children: List.generate(totalCells ~/ 7, (rowIndex) {
+              children: List.generate(totalCells ~/ 7, (row) {
                 return Column(
                   children: [
                     Row(
-                      children: List.generate(7, (colIndex) {
-                        final cellIndex = rowIndex * 7 + colIndex;
-                        final day = cellIndex - startWeekday + 1;
-
-                        if (day < 1 || day > totalDays) {
+                      children: List.generate(7, (col) {
+                        final idx = row * 7 + col;
+                        final day = idx - startEmpty + 1;
+                        if (day < 1 || day > days) {
                           return const Expanded(child: SizedBox(height: 104));
-                        } else {
-                          final date = DateTime(year, month, day);
-                          final records = vm.getRecordsForDate(date);
-                          final tags = extractEventTags(records);
-
-                          return CalendarDayCell(
-                            date: date,
-                            events: tags,
-                            onTap: () =>
-                                _openDetailSheet(context, date, records),
-                          );
                         }
+                        final date = DateTime(year, month, day);
+                        final items = vm.getRecordsForDate(date);
+                        final tags = extractEventTags(items);
+                        return CalendarDayCell(
+                          date: date,
+                          events: tags,
+                          onTap: () => _openDetail(context, date, items),
+                        );
                       }),
                     ),
-                    if (rowIndex < (totalCells ~/ 7) - 1)
+                    if (row < (totalCells ~/ 7) - 1)
                       const Divider(height: 1, color: Color(0xFFE8E8E6)),
                   ],
                 );
@@ -67,7 +61,7 @@ class CalendarView extends StatelessWidget {
     );
   }
 
-  void _openDetailSheet(
+  void _openDetail(
     BuildContext context,
     DateTime date,
     List<CalendarRecordItem> items,
@@ -88,29 +82,25 @@ class CalendarView extends StatelessWidget {
 
 class _WeekdayHeader extends StatelessWidget {
   const _WeekdayHeader();
-
   @override
   Widget build(BuildContext context) {
-    final weekdays = ['일', '월', '화', '수', '목', '금', '토'];
-
+    const days = ['일', '월', '화', '수', '목', '금', '토'];
     return Container(
       color: const Color(0xFFF9F4EE),
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
-        children: weekdays.map((label) {
-          final isSunday = label == '일';
-          final color =
-              isSunday ? const Color(0xFFD5584B) : const Color(0xFF985F35);
-
+        children: days.map((d) {
+          final isSun = d == '일';
           return Expanded(
             child: Center(
               child: Text(
-                label,
+                d,
                 style: TextStyle(
-                  color: color,
+                  color:
+                      isSun ? const Color(0xFFD5584B) : const Color(0xFF985F35),
                   fontSize: 14,
-                  fontFamily: 'Pretendard',
                   fontWeight: FontWeight.w500,
+                  fontFamily: 'Pretendard',
                 ),
               ),
             ),

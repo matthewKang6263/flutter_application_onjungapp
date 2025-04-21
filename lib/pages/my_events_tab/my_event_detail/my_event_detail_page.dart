@@ -1,30 +1,29 @@
 // 📁 lib/pages/my_events_tab/my_event_detail/my_event_detail_page.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter_application_onjungapp/models/enums/event_type.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_application_onjungapp/components/app_bar/custom_sub_app_bar.dart';
 import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/black_fill_button.dart';
 import 'package:flutter_application_onjungapp/components/buttons/rounded_toggle_button.dart';
 import 'package:flutter_application_onjungapp/components/dialogs/confirm_member_update_dialog.dart';
-import 'package:flutter_application_onjungapp/models/enums/event_type.dart';
 import 'package:flutter_application_onjungapp/models/my_event_model.dart';
 import 'package:flutter_application_onjungapp/pages/my_events_tab/my_event_detail/view/my_event_ledger_edit_view.dart';
 import 'package:flutter_application_onjungapp/pages/my_events_tab/my_event_detail/view/my_event_ledger_read_view.dart';
 import 'package:flutter_application_onjungapp/pages/my_events_tab/my_event_detail/view/my_event_summary_edit_view.dart';
 import 'package:flutter_application_onjungapp/pages/my_events_tab/my_event_detail/view/my_event_summary_read_view.dart';
 import 'package:flutter_application_onjungapp/viewmodels/my_events_tab/my_event_detail_view_model.dart';
-import 'package:provider/provider.dart';
 
-/// 📄 내 경조사 상세 페이지 (요약 / 전자 장부 탭 전환)
-class MyEventDetailPage extends StatefulWidget {
+class MyEventDetailPage extends ConsumerStatefulWidget {
   final MyEvent event;
 
   const MyEventDetailPage({super.key, required this.event});
 
   @override
-  State<MyEventDetailPage> createState() => _MyEventDetailPageState();
+  ConsumerState<MyEventDetailPage> createState() => _MyEventDetailPageState();
 }
 
-class _MyEventDetailPageState extends State<MyEventDetailPage> {
+class _MyEventDetailPageState extends ConsumerState<MyEventDetailPage> {
   bool isSummarySelected = true;
   bool isSummaryEditing = false;
   bool isLedgerEditing = false;
@@ -38,20 +37,21 @@ class _MyEventDetailPageState extends State<MyEventDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) {
-        final vm = MyEventDetailViewModel();
-        vm.loadData(widget.event);
-        return vm;
-      },
-      child: _buildContent(context),
-    );
-  }
+    final state = ref.watch(myEventDetailViewModelProvider(widget.event));
+    final notifier =
+        ref.read(myEventDetailViewModelProvider(widget.event).notifier);
 
-  Widget _buildContent(BuildContext context) {
+    final currentEvent = state.event;
+
+    if (state.isLoading || currentEvent == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: CustomSubAppBar(title: widget.event.title),
+      appBar: CustomSubAppBar(title: currentEvent.title),
       body: Column(
         children: [
           const SizedBox(height: 20),
@@ -73,21 +73,22 @@ class _MyEventDetailPageState extends State<MyEventDetailPage> {
             child: isSummarySelected
                 ? (isSummaryEditing
                     ? MyEventSummaryEditView(
-                        title: widget.event.title,
-                        initialDate: widget.event.date,
-                        initialEventType: widget.event.eventType.label,
+                        event: currentEvent,
+                        title: currentEvent.title,
+                        initialDate: currentEvent.date,
+                        initialEventType: currentEvent.eventType.label,
                       )
-                    : MyEventSummaryReadView())
+                    : MyEventSummaryReadView(event: currentEvent))
                 : (isLedgerEditing
                     ? MyEventLedgerEditView(
-                        event: widget.event,
+                        event: currentEvent,
                         onSelectionChanged: (updated) {
                           setState(() {
                             _latestLedgerSelection = updated;
                           });
                         },
                       )
-                    : MyEventLedgerReadView(event: widget.event)),
+                    : MyEventLedgerReadView(event: currentEvent)),
           ),
         ],
       ),
@@ -95,13 +96,16 @@ class _MyEventDetailPageState extends State<MyEventDetailPage> {
         minimum: const EdgeInsets.fromLTRB(16, 12, 16, 30),
         child: BlackFillButton(
           text: _currentIsEditing ? '완료' : '편집',
-          onTap: _toggleEditing,
+          onTap: () => _toggleEditing(state, notifier),
         ),
       ),
     );
   }
 
-  void _toggleEditing() {
+  void _toggleEditing(
+    MyEventDetailState state,
+    MyEventDetailViewModel notifier,
+  ) {
     if (isSummarySelected) {
       setState(() {
         isSummaryEditing = !isSummaryEditing;
@@ -112,9 +116,7 @@ class _MyEventDetailPageState extends State<MyEventDetailPage> {
           isLedgerEditing = true;
         });
       } else {
-        final vm = context.read<MyEventDetailViewModel>();
-
-        final totalCount = vm.records.length;
+        final totalCount = state.records.length;
         final selectedCount = _getSelectedLedgerRecordIds().length;
         final excludedCount = totalCount - selectedCount;
 
@@ -128,11 +130,7 @@ class _MyEventDetailPageState extends State<MyEventDetailPage> {
             onCancel: () => Navigator.pop(context),
             onConfirm: () async {
               Navigator.pop(context);
-
-              // 🔹 선택된 친구만 유지 → 나머지 삭제
-              await vm.saveLedgerChanges(_getSelectedLedgerRecordIds());
-
-              // 🔹 편집 모드 종료
+              await notifier.saveLedgerChanges(_getSelectedLedgerRecordIds());
               setState(() {
                 isLedgerEditing = false;
               });

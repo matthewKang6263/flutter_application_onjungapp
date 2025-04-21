@@ -2,16 +2,18 @@
 
 import 'package:flutter/material.dart';
 
-/// 홈탭 상단 통계 카드 (받은 마음 / 보낸 마음)
+/// 📊 홈 탭 상단 통계 카드
+/// - [title]: 예) '받은 마음', '보낸 마음'
+/// - [amount]: 예) '30,000원'
 class HomeStatCard extends StatelessWidget {
-  final String title; // 카드 제목 (ex. 받은 마음)
-  final String amount; // 금액 텍스트 (ex. 30,000원)
+  final String title;
+  final String amount;
 
   const HomeStatCard({
-    super.key,
+    Key? key,
     required this.title,
     required this.amount,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +26,7 @@ class HomeStatCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 🔸 타이틀 텍스트
+          // 카드 제목
           Text(
             title,
             style: const TextStyle(
@@ -36,8 +38,7 @@ class HomeStatCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-
-          // 🔸 금액 텍스트
+          // 금액
           Text(
             amount,
             style: const TextStyle(
@@ -47,13 +48,9 @@ class HomeStatCard extends StatelessWidget {
               color: Color(0xFFC9885C),
             ),
           ),
-
-          // 🔸 카드 하단 여백 (아이콘 등 필요 시 여기에 넣어도 됨)
+          // 하단 여백 (아이콘 등 추가 가능)
           const SizedBox(height: 12),
-          const SizedBox(
-            width: 153,
-            height: 115,
-          ),
+          const SizedBox(width: 153, height: 115),
         ],
       ),
     );

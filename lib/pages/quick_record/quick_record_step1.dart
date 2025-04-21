@@ -1,96 +1,90 @@
 // 📁 lib/pages/quick_record/quick_record_step1_page.dart
-
 import 'package:flutter/material.dart';
-import 'package:flutter_application_onjungapp/models/enums/relation_type.dart';
-import 'package:flutter_application_onjungapp/utils/validators.dart';
-import 'package:flutter_svg/flutter_svg.dart';
+import 'package:flutter_application_onjungapp/models/enums/method_type.dart';
+import 'package:flutter_application_onjungapp/pages/quick_record/quick_record_step2.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
+
 import 'package:flutter_application_onjungapp/components/app_bar/custom_sub_app_bar.dart';
-import 'package:flutter_application_onjungapp/components/bottom_buttons/bottom_fixed_button_container.dart';
-import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/black_fill_button.dart';
-import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/disabled_button.dart';
+import 'package:flutter_application_onjungapp/components/bar/step_progress_bar.dart';
 import 'package:flutter_application_onjungapp/components/buttons/money_quick_add_button.dart';
 import 'package:flutter_application_onjungapp/components/buttons/rounded_toggle_button.dart';
 import 'package:flutter_application_onjungapp/components/buttons/selectable_chip_button.dart';
-import 'package:flutter_application_onjungapp/components/bar/step_progress_bar.dart';
-import 'package:flutter_application_onjungapp/components/tag_label.dart';
+import 'package:flutter_application_onjungapp/components/bottom_buttons/bottom_fixed_button_container.dart';
+import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/black_fill_button.dart';
+import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/disabled_button.dart';
 import 'package:flutter_application_onjungapp/components/text_fields/custom_text_field.dart';
 import 'package:flutter_application_onjungapp/components/text_fields/text_field_config.dart';
 import 'package:flutter_application_onjungapp/components/text_fields/text_field_type.dart';
-import 'package:flutter_application_onjungapp/models/enums/method_type.dart';
 import 'package:flutter_application_onjungapp/models/friend_model.dart';
-import 'package:flutter_application_onjungapp/pages/quick_record/quick_record_step2.dart';
 import 'package:flutter_application_onjungapp/pages/search/search_person_page.dart';
 import 'package:flutter_application_onjungapp/viewmodels/quick_record/quick_record_view_model.dart';
 
-class QuickRecordStep1Page extends StatefulWidget {
-  final String? initialName;
-  final DateTime? initialDate;
-
-  const QuickRecordStep1Page({super.key, this.initialName, this.initialDate});
+/// 🏃‍♂️ 빠른 기록 Step1: 보낸/받은 & 친구 선택 + 금액 입력
+class QuickRecordStep1Page extends ConsumerStatefulWidget {
+  const QuickRecordStep1Page({super.key});
 
   @override
-  State<QuickRecordStep1Page> createState() => _QuickRecordStep1PageState();
+  ConsumerState<QuickRecordStep1Page> createState() =>
+      _QuickRecordStep1PageState();
 }
 
-class _QuickRecordStep1PageState extends State<QuickRecordStep1Page> {
-  final TextEditingController moneyController = TextEditingController();
-  final FocusNode moneyFocusNode = FocusNode();
-
-  final TextEditingController nameController = TextEditingController();
-  final FocusNode nameFocusNode = FocusNode();
+class _QuickRecordStep1PageState extends ConsumerState<QuickRecordStep1Page> {
+  final _moneyCtrl = TextEditingController();
+  final _moneyFocus = FocusNode();
+  final _nameCtrl = TextEditingController();
+  final _nameFocus = FocusNode();
 
   @override
   void initState() {
     super.initState();
-    final vm = context.read<QuickRecordViewModel>();
-    moneyController.text = NumberFormat('#,###').format(vm.amount);
-    nameController.text = vm.selectedFriend?.name ?? '';
+    final vm = ref.read(quickRecordViewModelProvider.notifier);
+    final state = ref.read(quickRecordViewModelProvider);
 
-    moneyController.addListener(() {
-      final raw = moneyController.text.replaceAll(RegExp(r'[^0-9]'), '');
-      final parsed = int.tryParse(raw) ?? 0;
-      vm.setAmount(parsed);
+    // 초기 금액 포맷팅
+    _moneyCtrl.text = NumberFormat.decimalPattern('ko').format(state.amount);
+    // 초기 친구 이름
+    _nameCtrl.text = state.selectedFriend?.name ?? '';
+
+    // 금액 변경 리스너
+    _moneyCtrl.addListener(() {
+      final raw = _moneyCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
+      vm.setAmount(int.tryParse(raw) ?? 0);
     });
-
-    moneyFocusNode.addListener(() => setState(() {}));
-  }
-
-  Future<void> selectFriend() async {
-    final result = await Navigator.push<Friend>(
-      context,
-      MaterialPageRoute(builder: (_) => const SearchPersonPage()),
-    );
-
-    if (result != null) {
-      context.read<QuickRecordViewModel>().selectFriend(result);
-      nameController.text = result.name;
-    }
-
-    await Future.delayed(const Duration(milliseconds: 100));
-    if (mounted) FocusScope.of(context).unfocus();
+    _moneyFocus.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
-    moneyController.dispose();
-    moneyFocusNode.dispose();
-    nameController.dispose();
-    nameFocusNode.dispose();
+    _moneyCtrl.dispose();
+    _moneyFocus.dispose();
+    _nameCtrl.dispose();
+    _nameFocus.dispose();
     super.dispose();
+  }
+
+  Future<void> _selectFriend() async {
+    final res = await Navigator.push<Friend>(
+      context,
+      MaterialPageRoute(builder: (_) => const SearchPersonPage()),
+    );
+    if (res != null) {
+      ref.read(quickRecordViewModelProvider.notifier).selectFriend(res);
+      _nameCtrl.text = res.name;
+    }
+    // 포커스 해제
+    await Future.delayed(Duration.zero);
+    if (mounted) FocusScope.of(context).unfocus();
   }
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<QuickRecordViewModel>();
-    final isSend = vm.isSend;
-    final selectedFriend = vm.selectedFriend;
-    final amount = vm.amount;
-    final selectedMethod = vm.selectedMethod;
+    final state = ref.watch(quickRecordViewModelProvider);
+    final vm = ref.read(quickRecordViewModelProvider.notifier);
 
-    final isFormValid =
-        selectedFriend != null && amount > 0 && selectedMethod != null;
+    final isFormValid = state.selectedFriend != null &&
+        state.amount > 0 &&
+        state.method != null;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -107,182 +101,126 @@ class _QuickRecordStep1PageState extends State<QuickRecordStep1Page> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // 송수신 토글
                       RoundedToggleButton(
                         leftText: '보냈어요',
                         rightText: '받았어요',
-                        isLeftSelected: isSend,
-                        onToggle: (isLeft) => vm.toggleIsSend(isLeft),
+                        isLeftSelected: state.isSend,
+                        onToggle: vm.toggleIsSend,
                       ),
                       const SizedBox(height: 24),
                       Text(
-                        isSend
-                            ? '누구에게 얼마를 보냈는지\n입력해 주세요.'
-                            : '누구에게 얼마를 받았는지\n입력해 주세요.',
+                        state.isSend ? '누구에게 얼마를 보냈나요?' : '누구에게 얼마를 받았나요?',
                         style: const TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w700,
-                          height: 1.36,
-                          color: Color(0xFF2A2928),
-                          fontFamily: 'Pretendard',
                         ),
                       ),
                       const SizedBox(height: 24),
-                      Text(
-                        isSend ? '받으신 분' : '보내신 분',
-                        style: const TextStyle(
+                      // 친구 선택
+                      const Text(
+                        '대상 친구',
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          fontFamily: 'Pretendard',
                         ),
                       ),
                       const SizedBox(height: 8),
                       CustomTextField(
                         config: TextFieldConfig(
-                          controller: nameController,
-                          focusNode: nameFocusNode,
+                          controller: _nameCtrl,
+                          focusNode: _nameFocus,
                           type: TextFieldType.search,
                           readOnlyOverride: false,
-                          showCursorOverride: false,
-                          onTap: selectFriend,
+                          onTap: _selectFriend,
                           onClear: () {
                             vm.clearFriend();
-                            nameController.clear();
+                            _nameCtrl.clear();
                           },
                         ),
                       ),
                       const SizedBox(height: 8),
-                      if (selectedFriend == null)
+                      // 주소록 안내
+                      if (state.selectedFriend == null)
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: const Color(0xFFFFF5E8),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Row(
-                            children: [
-                              SvgPicture.asset(
-                                'assets/icons/notice.svg',
-                                width: 16,
-                                height: 16,
-                                color: const Color(0xFF985F35),
-                              ),
-                              const SizedBox(width: 4),
-                              const Text(
-                                '주소록에 존재하는 분만 선택이 가능해요',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF985F35),
-                                  fontFamily: 'Pretendard',
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      else
-                        Row(
-                          children: [
-                            TagLabel.fromRelationType(
-                                selectedFriend.relation ?? RelationType.etc),
-                            const SizedBox(width: 4),
-                            Text(
-                              formatPhoneNumber(selectedFriend.phone ?? ''),
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF2A2928),
-                                fontFamily: 'Pretendard',
-                              ),
+                          child: const Text(
+                            '주소록에 있는 친구만 선택할 수 있어요.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF985F35),
                             ),
-                          ],
+                          ),
                         ),
                       const SizedBox(height: 24),
-                      Text(
-                        isSend ? '보낸 금액(원)' : '받은 금액(원)',
-                        style: const TextStyle(
+                      const Text(
+                        '금액 입력',
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          fontFamily: 'Pretendard',
                         ),
                       ),
                       const SizedBox(height: 8),
                       CustomTextField(
                         config: TextFieldConfig(
-                          controller: moneyController,
-                          focusNode: moneyFocusNode,
+                          controller: _moneyCtrl,
+                          focusNode: _moneyFocus,
                           type: TextFieldType.amount,
                           isLarge: true,
-                          readOnlyOverride: false,
-                          onTap: () => setState(() {}),
                           onChanged: (_) => setState(() {}),
-                          onClear: () => moneyController.clear(),
+                          onClear: () => _moneyCtrl.clear(),
                         ),
                       ),
                       const SizedBox(height: 12),
+                      // 빠른 금액 버튼
                       Row(
-                        children: List.generate(4, (i) {
-                          final labels = ['+1만', '+5만', '+10만', '+50만'];
-                          final values = [10000, 50000, 100000, 500000];
-                          return Expanded(
-                            child: Padding(
-                              padding: EdgeInsets.only(
-                                left: i == 0 ? 0 : 4,
-                                right: i == 3 ? 0 : 4,
-                              ),
-                              child: MoneyQuickAddButton(
-                                label: labels[i],
-                                onTap: () {
-                                  vm.addAmount(values[i]);
-                                  moneyController.text =
-                                      NumberFormat('#,###').format(vm.amount);
-                                },
-                              ),
-                            ),
-                          );
-                        }),
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
-                        children: const [
-                          Text(
-                            '전달한 방식',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              fontFamily: 'Pretendard',
-                            ),
-                          ),
-                          SizedBox(width: 4),
-                          Text(
-                            '(*선물의 가격대를 금액으로 활용 가능해요)',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Color(0xFF985F35),
-                              fontWeight: FontWeight.w500,
-                              fontFamily: 'Pretendard',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: MethodType.values.map((method) {
+                        children: [10000, 50000, 100000, 500000].map((amt) {
                           return Expanded(
                             child: Padding(
                               padding:
-                                  const EdgeInsets.symmetric(horizontal: 4),
-                              child: SelectableChipButton(
-                                label: method.label,
-                                isSelected: selectedMethod == method,
-                                onTap: () => vm.selectMethod(method),
-                              ),
+                                  EdgeInsets.only(right: amt == 500000 ? 0 : 8),
+                              child: MoneyQuickAddButton(
+                                  label: '+${amt ~/ 10000}만',
+                                  onTap: () {
+                                    vm.addAmount(amt);
+                                    // UI 쪽에선 항상 watch 한 state.amount 를 참조
+                                    _moneyCtrl.text = NumberFormat
+                                            .decimalPattern('ko')
+                                        .format(ref
+                                            .read(quickRecordViewModelProvider)
+                                            .amount);
+                                  }),
                             ),
                           );
                         }).toList(),
                       ),
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 24),
+                      const Text(
+                        '전달 방식',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      // 수단 칩
+                      Wrap(
+                        spacing: 8,
+                        children: MethodType.values.map((m) {
+                          return SelectableChipButton(
+                            label: m.label,
+                            isSelected: state.method == m,
+                            onTap: () => vm.selectMethod(m),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 24),
                     ],
                   ),
                 ),
@@ -295,9 +233,7 @@ class _QuickRecordStep1PageState extends State<QuickRecordStep1Page> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => QuickRecordStep2Page(
-                                initialDate: widget.initialDate,
-                              ),
+                              builder: (_) => const QuickRecordStep2Page(),
                             ),
                           );
                         },

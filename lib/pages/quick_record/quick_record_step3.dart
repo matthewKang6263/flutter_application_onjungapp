@@ -1,6 +1,6 @@
+// 📁 lib/pages/quick_record/quick_record_step3_page.dart
 import 'package:flutter/material.dart';
-import 'package:flutter_application_onjungapp/viewmodels/auth/user_view_model.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_application_onjungapp/components/app_bar/custom_sub_app_bar.dart';
 import 'package:flutter_application_onjungapp/components/bar/step_progress_bar.dart';
 import 'package:flutter_application_onjungapp/components/bottom_buttons/bottom_fixed_button_container.dart';
@@ -12,40 +12,42 @@ import 'package:flutter_application_onjungapp/components/text_fields/text_field_
 import 'package:flutter_application_onjungapp/components/text_fields/text_field_type.dart';
 import 'package:flutter_application_onjungapp/models/enums/attendance_type.dart';
 import 'package:flutter_application_onjungapp/viewmodels/quick_record/quick_record_view_model.dart';
+import 'package:flutter_application_onjungapp/viewmodels/auth/user_view_model.dart';
 
-class QuickRecordStep3Page extends StatefulWidget {
-  const QuickRecordStep3Page({super.key});
+/// 📝 빠른 기록 Step3: 참석 여부 + 메모
+class QuickRecordStep3Page extends ConsumerStatefulWidget {
+  const QuickRecordStep3Page({Key? key}) : super(key: key);
 
   @override
-  State<QuickRecordStep3Page> createState() => _QuickRecordStep3PageState();
+  ConsumerState<QuickRecordStep3Page> createState() =>
+      _QuickRecordStep3PageState();
 }
 
-class _QuickRecordStep3PageState extends State<QuickRecordStep3Page> {
-  final TextEditingController _memoController = TextEditingController();
-  final FocusNode _memoFocusNode = FocusNode();
+class _QuickRecordStep3PageState extends ConsumerState<QuickRecordStep3Page> {
+  final _memoCtrl = TextEditingController();
+  final _memoFocus = FocusNode();
 
   @override
   void initState() {
     super.initState();
-    final vm = context.read<QuickRecordViewModel>();
-    _memoController.text = vm.memo;
+    _memoCtrl.text = ref.read(quickRecordViewModelProvider).memo;
   }
 
   @override
   void dispose() {
-    _memoController.dispose();
-    _memoFocusNode.dispose();
+    _memoCtrl.dispose();
+    _memoFocus.dispose();
     super.dispose();
-  }
-
-  void goToHome(BuildContext context) {
-    Navigator.popUntil(context, (route) => route.isFirst);
   }
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<QuickRecordViewModel>();
-    final userId = context.watch<UserViewModel>().uid;
+    final state = ref.watch(quickRecordViewModelProvider);
+    final vm = ref.read(quickRecordViewModelProvider.notifier);
+    final userId = ref.read(userViewModelProvider).uid;
+
+    final canSubmit = state.attendance != null;
+
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
@@ -62,90 +64,59 @@ class _QuickRecordStep3PageState extends State<QuickRecordStep3Page> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        '더 기록할 내용이 있다면',
+                        '참석 여부를 선택해 주세요.',
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w700,
-                          fontFamily: 'Pretendard',
-                          color: Color(0xFF2A2928),
-                          height: 1.36,
                         ),
                       ),
-                      const Text(
-                        '알려주세요.',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          fontFamily: 'Pretendard',
-                          color: Color(0xFF2A2928),
-                          height: 1.36,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-
-                      // 🔸 참석 여부
-                      const Text(
-                        '참석 여부',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          fontFamily: 'Pretendard',
-                        ),
-                      ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 16),
+                      // 참석 여부 칩
                       Row(
-                        children: AttendanceType.values.map((type) {
+                        children: AttendanceType.values.map((t) {
                           return Expanded(
                             child: Padding(
                               padding:
                                   const EdgeInsets.symmetric(horizontal: 4),
                               child: SelectableChipButton(
-                                label: type.label,
-                                isSelected: vm.attendance == type,
-                                onTap: () => vm.selectAttendance(type),
+                                label: t.label,
+                                isSelected: state.attendance == t,
+                                onTap: () => vm.selectAttendance(t),
                               ),
                             ),
                           );
                         }).toList(),
                       ),
                       const SizedBox(height: 24),
-
-                      // 🔸 메모 필드
                       const Text(
-                        '메모',
+                        '메모 (선택)',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          fontFamily: 'Pretendard',
                         ),
                       ),
                       const SizedBox(height: 8),
                       CustomTextField(
                         config: TextFieldConfig(
-                          controller: _memoController,
-                          focusNode: _memoFocusNode,
+                          controller: _memoCtrl,
+                          focusNode: _memoFocus,
                           type: TextFieldType.memo,
                           isLarge: true,
-                          readOnlyOverride: false,
-                          onTap: () => setState(() {}),
                           onChanged: vm.updateMemo,
                           onClear: () {
-                            _memoController.clear();
+                            _memoCtrl.clear();
                             vm.clearMemo();
                           },
                         ),
                       ),
-                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
               ),
-
-              // 🔸 하단 버튼
               BottomFixedButtonContainer(
-                child: vm.attendance != null
+                child: canSubmit
                     ? BlackFillButton(
-                        text: '확인',
+                        text: '완료',
                         onTap: () async {
                           if (userId == null) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -155,20 +126,20 @@ class _QuickRecordStep3PageState extends State<QuickRecordStep3Page> {
                             );
                             return;
                           }
-
                           try {
                             await vm.submit(userId);
                             vm.reset();
-                            goToHome(context);
-                          } catch (e) {
+                            Navigator.popUntil(context, (r) => r.isFirst);
+                          } catch (_) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('저장에 실패했어요. 다시 시도해주세요.'),
+                                content: Text('저장에 실패했습니다.'),
                               ),
                             );
                           }
-                        })
-                    : const DisabledButton(text: '확인'),
+                        },
+                      )
+                    : const DisabledButton(text: '완료'),
               ),
             ],
           ),

@@ -1,107 +1,71 @@
-// 📁 파일 경로: lib/pages/my_events_tab/my_event_detail/my_event_add_friends_page.dart
+// 📁 lib/pages/my_events_tab/my_event_detail/my_event_add_friends_page.dart
+// ignore_for_file: deprecated_member_use, use_build_context_synchronously
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_onjungapp/components/dialogs/confirm_member_update_dialog.dart';
-import 'package:flutter_application_onjungapp/models/event_record_model.dart';
-import 'package:flutter_application_onjungapp/models/friend_model.dart';
-import 'package:flutter_application_onjungapp/models/my_event_model.dart';
-import 'package:flutter_application_onjungapp/pages/my_events_tab/widgets/my_event_friend_list_item.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_application_onjungapp/components/app_bar/custom_sub_app_bar.dart';
 import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/black_fill_button.dart';
 import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/disabled_button.dart';
+import 'package:flutter_application_onjungapp/components/dialogs/confirm_member_update_dialog.dart';
 import 'package:flutter_application_onjungapp/components/dividers/thick_divider.dart';
+import 'package:flutter_application_onjungapp/models/my_event_model.dart';
 import 'package:flutter_application_onjungapp/viewmodels/my_events_tab/my_event_detail_view_model.dart';
-import 'package:flutter_application_onjungapp/repositories/event_record_repository.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_application_onjungapp/pages/my_events_tab/widgets/my_event_friend_list_item.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:uuid/uuid.dart';
 
-class MyEventAddFriendsPage extends StatefulWidget {
+class MyEventAddFriendsPage extends ConsumerStatefulWidget {
   final MyEvent event;
 
   const MyEventAddFriendsPage({super.key, required this.event});
 
   @override
-  State<MyEventAddFriendsPage> createState() => _MyEventAddFriendsPageState();
+  ConsumerState<MyEventAddFriendsPage> createState() =>
+      _MyEventAddFriendsPageState();
 }
 
-class _MyEventAddFriendsPageState extends State<MyEventAddFriendsPage> {
+class _MyEventAddFriendsPageState extends ConsumerState<MyEventAddFriendsPage> {
   final Set<String> _selectedFriendIds = {};
-  List<Friend> _availableFriends = [];
 
   bool get _isNextEnabled => _selectedFriendIds.isNotEmpty;
-  bool get _isAllSelected =>
-      _selectedFriendIds.length == _availableFriends.length;
-
-  @override
-  void initState() {
-    super.initState();
-    final vm = context.read<MyEventDetailViewModel>();
-    final excluded = widget.event.recordIds.toSet();
-    _availableFriends =
-        vm.friends.where((f) => !excluded.contains(f.id)).toList();
-  }
-
-  void _toggleAllSelections() {
-    setState(() {
-      if (_isAllSelected) {
-        _selectedFriendIds.clear();
-      } else {
-        _selectedFriendIds.addAll(_availableFriends.map((f) => f.id));
-      }
-    });
-  }
-
-  void _toggleSelection(String id) {
-    setState(() {
-      if (_selectedFriendIds.contains(id)) {
-        _selectedFriendIds.remove(id);
-      } else {
-        _selectedFriendIds.add(id);
-      }
-    });
-  }
-
-  Future<void> _submit() async {
-    final vm = context.read<MyEventDetailViewModel>();
-    final repo = EventRecordRepository();
-    final now = DateTime.now();
-    final newRecords = _selectedFriendIds.map((id) {
-      return EventRecord(
-        id: const Uuid().v4(),
-        friendId: id,
-        eventId: widget.event.id,
-        eventType: widget.event.eventType, // ✅ 필수
-        amount: 0,
-        date: widget.event.date,
-        isSent: false,
-        method: null,
-        attendance: null,
-        memo: null,
-        createdBy: widget.event.createdBy,
-        createdAt: now,
-        updatedAt: now,
-      );
-    }).toList();
-
-    try {
-      for (final record in newRecords) {
-        await repo.addEventRecord(record);
-      }
-      await vm.loadData(widget.event);
-    } catch (e) {
-      print('🚨 추가 실패: $e');
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
+    final vm = ref.watch(myEventDetailViewModelProvider(widget.event));
+    final notifier =
+        ref.read(myEventDetailViewModelProvider(widget.event).notifier);
+
+    final allFriends = vm.friends;
+    final excluded = widget.event.recordIds.toSet();
+    final availableFriends =
+        allFriends.where((f) => !excluded.contains(f.id)).toList();
+
+    final isAllSelected = _selectedFriendIds.length == availableFriends.length;
+
+    void toggleAllSelections() {
+      setState(() {
+        if (isAllSelected) {
+          _selectedFriendIds.clear();
+        } else {
+          _selectedFriendIds.addAll(availableFriends.map((f) => f.id));
+        }
+      });
+    }
+
+    void toggleSelection(String id) {
+      setState(() {
+        if (_selectedFriendIds.contains(id)) {
+          _selectedFriendIds.remove(id);
+        } else {
+          _selectedFriendIds.add(id);
+        }
+      });
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const CustomSubAppBar(title: '인원 추가'),
       body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -111,7 +75,7 @@ class _MyEventAddFriendsPageState extends State<MyEventAddFriendsPage> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      '선택한 친구 (${_selectedFriendIds.length}/${_availableFriends.length}) 명',
+                      '선택한 친구 (${_selectedFriendIds.length}/${availableFriends.length}) 명',
                       style: const TextStyle(
                         color: Color(0xFF2A2928),
                         fontSize: 14,
@@ -168,11 +132,11 @@ class _MyEventAddFriendsPageState extends State<MyEventAddFriendsPage> {
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               GestureDetector(
-                                onTap: _toggleAllSelections,
+                                onTap: toggleAllSelections,
                                 child: Row(
                                   children: [
                                     Text(
-                                      _isAllSelected ? '전체 해제' : '전체 선택',
+                                      isAllSelected ? '전체 해제' : '전체 선택',
                                       style: const TextStyle(
                                         color: Color(0xFF985F35),
                                         fontSize: 14,
@@ -182,7 +146,7 @@ class _MyEventAddFriendsPageState extends State<MyEventAddFriendsPage> {
                                     ),
                                     const SizedBox(width: 4),
                                     SvgPicture.asset(
-                                      _isAllSelected
+                                      isAllSelected
                                           ? 'assets/icons/selected.svg'
                                           : 'assets/icons/select.svg',
                                       width: 24,
@@ -202,7 +166,7 @@ class _MyEventAddFriendsPageState extends State<MyEventAddFriendsPage> {
               ),
             ),
             Expanded(
-              child: _availableFriends.isEmpty
+              child: availableFriends.isEmpty
                   ? const Center(
                       child: Text(
                         '더이상 추가할 수 있는 친구가 없어요',
@@ -216,17 +180,17 @@ class _MyEventAddFriendsPageState extends State<MyEventAddFriendsPage> {
                     )
                   : ListView.separated(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _availableFriends.length,
+                      itemCount: availableFriends.length,
                       separatorBuilder: (_, __) =>
                           Container(height: 1, color: const Color(0xFFE9E5E1)),
                       itemBuilder: (_, index) {
-                        final friend = _availableFriends[index];
+                        final friend = availableFriends[index];
                         final isSelected =
                             _selectedFriendIds.contains(friend.id);
                         return MyEventFriendListItem(
                           friend: friend,
                           isSelected: isSelected,
-                          onTap: () => _toggleSelection(friend.id),
+                          onTap: () => toggleSelection(friend.id),
                         );
                       },
                     ),
@@ -250,7 +214,9 @@ class _MyEventAddFriendsPageState extends State<MyEventAddFriendsPage> {
                               isExclusion: false,
                               onConfirm: () async {
                                 Navigator.pop(context);
-                                await _submit();
+                                await notifier
+                                    .addRecordsForGuests(_selectedFriendIds);
+                                if (!mounted) return;
                                 Navigator.pop(context);
                               },
                               onCancel: () => Navigator.pop(context),

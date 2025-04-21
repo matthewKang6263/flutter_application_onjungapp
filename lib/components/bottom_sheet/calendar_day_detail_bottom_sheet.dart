@@ -1,17 +1,15 @@
+// 📁 lib/pages/calendar_tab/widgets/calendar_day_detail_bottom_sheet.dart
+// ignore_for_file: deprecated_member_use
+
 import 'package:flutter/material.dart';
-import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/black_fill_button.dart';
-import 'package:flutter_application_onjungapp/components/dividers/thin_divider.dart';
-import 'package:flutter_application_onjungapp/models/enums/attendance_type.dart';
-import 'package:flutter_application_onjungapp/models/enums/event_type.dart';
-import 'package:flutter_application_onjungapp/models/enums/method_type.dart';
-import 'package:flutter_application_onjungapp/models/enums/relation_type.dart';
-import 'package:flutter_application_onjungapp/pages/detail_record/detail_record_page.dart';
-import 'package:flutter_application_onjungapp/pages/quick_record/quick_record_step1.dart';
-import 'package:flutter_application_onjungapp/utils/input_formatters.dart';
-import 'package:flutter_application_onjungapp/viewmodels/calendar_tab/calendar_tab_viewmodel.dart';
-import 'package:flutter_application_onjungapp/pages/calendar_tab/widgets/calendar_day_detail_item.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/black_fill_button.dart';
+import 'package:flutter_application_onjungapp/components/dividers/thin_divider.dart';
+import 'package:flutter_application_onjungapp/pages/detail_record/detail_record_page.dart';
+import 'package:flutter_application_onjungapp/pages/quick_record/quick_record_step1.dart';
+import 'package:flutter_application_onjungapp/pages/calendar_tab/widgets/calendar_day_detail_item.dart';
+import 'package:flutter_application_onjungapp/viewmodels/calendar_tab/calendar_tab_view_model.dart';
 
 /// 📌 캘린더 날짜 선택 시 표시되는 바텀시트
 /// - 선택한 날짜에 해당하는 경조사 내역 리스트 출력
@@ -49,7 +47,7 @@ class CalendarDayDetailBottomSheet extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ✅ 타이틀 + 추가 버튼 (padding 16 유지)
+          // ✅ 타이틀 + 추가 버튼
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
@@ -73,9 +71,9 @@ class CalendarDayDetailBottomSheet extends StatelessWidget {
                       ),
                     );
                   },
-                  borderRadius: BorderRadius.circular(100), // 터치 영역 둥글게
+                  borderRadius: BorderRadius.circular(100),
                   child: Padding(
-                    padding: const EdgeInsets.all(8), // 터치 영역 넓히기
+                    padding: const EdgeInsets.all(8),
                     child: SvgPicture.asset(
                       'assets/icons/add.svg',
                       width: 16,
@@ -90,9 +88,8 @@ class CalendarDayDetailBottomSheet extends StatelessWidget {
 
           const SizedBox(height: 14),
 
-          // ✅ 상단 디바이더 (내역 있을 경우만)
+          // ✅ 디바이더
           if (items.isNotEmpty) const ThinDivider(),
-
           const SizedBox(height: 8),
 
           // ✅ 내역 리스트
@@ -105,29 +102,18 @@ class CalendarDayDetailBottomSheet extends StatelessWidget {
                       final item = items[index];
 
                       return CalendarDayDetailItem(
-                          item: item,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => DetailRecordPage(
-                                  name: item.friend.name,
-                                  relation: item.friend.relation?.label ?? '-',
-                                  amount:
-                                      formatNumberWithComma(item.record.amount),
-                                  direction: item.record.isSent ? '보냄' : '받음',
-                                  eventType:
-                                      item.record.eventType?.label ?? '-',
-                                  date: DateFormat('yyyy년 M월 d일 (E)', 'ko_KR')
-                                      .format(item.record.date),
-                                  method: item.record.method?.label ?? '-',
-                                  attendance:
-                                      item.record.attendance?.label ?? '-',
-                                  memo: item.record.memo ?? '',
-                                ),
+                        item: item,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => DetailRecordPage(
+                                recordId: item.record.id, // ✅ ✅ 핵심 변경
                               ),
-                            );
-                          });
+                            ),
+                          );
+                        },
+                      );
                     },
                   )
                 : const Center(
@@ -146,8 +132,9 @@ class CalendarDayDetailBottomSheet extends StatelessWidget {
                   ),
           ),
 
-          // ✅ 하단 확인 버튼
           const SizedBox(height: 16),
+
+          // ✅ 하단 확인 버튼
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: BlackFillButton(

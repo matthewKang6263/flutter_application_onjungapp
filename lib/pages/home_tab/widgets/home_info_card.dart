@@ -3,22 +3,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-/// 온정 설명서 / 빠른 기록 안내 카드
+/// 🃏 홈 탭 안내용 정보 카드
+/// - [title]: 카드 제목
+/// - [subtitle]: 카드 부제목
+/// - [onTap]: 카드 클릭 시 콜백 (선택적)
+/// - [iconPath]: SVG 아이콘 경로 (선택적)
+/// - [iconAfterTitle]: 제목 우측에 아이콘 노출 여부
 class HomeInfoCard extends StatelessWidget {
-  final String title; // 제목
-  final String subtitle; // 부제목
-  final VoidCallback? onTap; // 클릭 시 실행할 함수
-  final String? iconPath; // 아이콘 SVG 경로
-  final bool iconAfterTitle; // 아이콘 위치 오른쪽 여부
+  final String title;
+  final String subtitle;
+  final VoidCallback? onTap;
+  final String? iconPath;
+  final bool iconAfterTitle;
 
   const HomeInfoCard({
-    super.key,
+    Key? key,
     required this.title,
     required this.subtitle,
     this.onTap,
     this.iconPath,
     this.iconAfterTitle = false,
-  });
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -34,18 +39,17 @@ class HomeInfoCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // 🔹 오른쪽 아이콘 카드일 경우 좌측 공간 확보
+            // 아이콘이 제목 뒤에 있을 땐 앞에 자리 확보
             if (iconAfterTitle) const SizedBox(width: 64),
 
-            // 🔹 왼쪽 아이콘
+            // 왼쪽 아이콘
             if (!iconAfterTitle)
               iconPath != null
                   ? SvgPicture.asset(iconPath!, width: 48, height: 48)
                   : const SizedBox(width: 48, height: 48),
-
             if (!iconAfterTitle) const SizedBox(width: 16),
 
-            // 🔹 텍스트 및 우측 아이콘
+            // 제목·부제목 + (필요 시) 우측 소형 아이콘
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,7 +73,7 @@ class HomeInfoCard extends StatelessWidget {
                           height: 16,
                           color: const Color(0xFFC9885C),
                         ),
-                      ]
+                      ],
                     ],
                   ),
                   const SizedBox(height: 4),

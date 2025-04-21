@@ -1,9 +1,10 @@
+// lib/models/enums/relation_type.dart
+
 import 'package:flutter/material.dart';
 
 /// 🔹 친구와의 관계 유형
-/// - 친구 등록 시 선택 가능하며, 관계 태그/필터 등에 사용됨
 enum RelationType {
-  unset, // 관계 미설정 상태 (UI에서는 '미정' 태그로 표시)
+  unset, // 미정
   family, // 가족
   relative, // 친척
   friend, // 친구
@@ -12,11 +13,8 @@ enum RelationType {
   etc, // 기타
 }
 
-/// 🔸 RelationType 확장
-/// - 각 enum에 대해 UI에 필요한 한글 라벨, 배경색, 텍스트 색상을 정의
+/// 🔸 RelationType 확장: UI 표시용 한글 라벨 및 색상 설정
 extension RelationTypeExtension on RelationType {
-  /// 🔹 관계에 대한 한글 라벨
-  /// - 태그 등에 표시할 텍스트로 사용됨
   String get label {
     switch (this) {
       case RelationType.family:
@@ -36,7 +34,6 @@ extension RelationTypeExtension on RelationType {
     }
   }
 
-  /// 🔹 태그 배경색
   Color get backgroundColor {
     switch (this) {
       case RelationType.family:
@@ -56,7 +53,6 @@ extension RelationTypeExtension on RelationType {
     }
   }
 
-  /// 🔹 태그 텍스트 색상
   Color get textColor {
     switch (this) {
       case RelationType.family:
@@ -76,7 +72,7 @@ extension RelationTypeExtension on RelationType {
     }
   }
 
-  /// ✅ 🔹 문자열을 RelationType으로 변환
+  /// 🔹 문자열 → RelationType 변환 (디폴트 unset)
   static RelationType fromString(String? value) {
     if (value == null) return RelationType.unset;
     return RelationType.values.firstWhere(

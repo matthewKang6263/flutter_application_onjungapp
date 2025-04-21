@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_onjungapp/viewmodels/my_events_tab/my_event_add_view_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+
+import 'package:flutter_application_onjungapp/viewmodels/my_events_tab/my_event_add_view_model.dart';
 import 'package:flutter_application_onjungapp/components/app_bar/custom_sub_app_bar.dart';
 import 'package:flutter_application_onjungapp/components/bar/step_progress_bar.dart';
 import 'package:flutter_application_onjungapp/components/bottom_buttons/bottom_fixed_button_container.dart';
@@ -10,47 +12,51 @@ import 'package:flutter_application_onjungapp/components/text_fields/custom_text
 import 'package:flutter_application_onjungapp/components/text_fields/text_field_config.dart';
 import 'package:flutter_application_onjungapp/components/text_fields/text_field_type.dart';
 import 'package:flutter_application_onjungapp/pages/my_events_tab/my_event_add/my_event_add_complete_page.dart';
-import 'package:provider/provider.dart';
 
-class MyEventAddStep3Page extends StatefulWidget {
+class MyEventAddStep3Page extends ConsumerStatefulWidget {
   const MyEventAddStep3Page({super.key});
 
   @override
-  State<MyEventAddStep3Page> createState() => _MyEventAddStep3PageState();
+  ConsumerState<MyEventAddStep3Page> createState() =>
+      _MyEventAddStep3PageState();
 }
 
-class _MyEventAddStep3PageState extends State<MyEventAddStep3Page> {
+class _MyEventAddStep3PageState extends ConsumerState<MyEventAddStep3Page> {
   @override
   void initState() {
     super.initState();
-    context.read<MyEventAddViewModel>().initFlowerControllers();
+    // 🌸 화환 입력 필드 초기화
+    ref.read(myEventAddViewModelProvider.notifier).initFlowerControllers();
   }
 
+  /// ✅ 저장 또는 건너뛰기
   Future<void> _onSubmit({bool skip = false}) async {
-    final vm = context.read<MyEventAddViewModel>();
-    const userId = 'tempUserId'; // TODO: 실제 로그인 정보로 교체할 것
+    final notifier = ref.read(myEventAddViewModelProvider.notifier);
+    const userId = 'test-user'; // TODO: 로그인 연동 시 대체
 
     if (skip) {
-      vm.flowerControllers.clear();
+      // 건너뛰는 경우 컨트롤러 비우기
+      notifier.initFlowerControllers();
     }
 
-    final myEvent = await vm.submit(userId);
-    if (myEvent != null && mounted) {
+    final event = await notifier.submit(userId);
+    if (event != null && mounted) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => MyEventAddCompletePage(event: myEvent),
+          builder: (_) => MyEventAddCompletePage(event: event),
         ),
       );
     } else {
-      // TODO: 에러 처리 (토스트 등)
+      // TODO: 에러 처리
       print('🚨 이벤트 생성 실패');
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<MyEventAddViewModel>();
+    final state = ref.watch(myEventAddViewModelProvider);
+    final notifier = ref.read(myEventAddViewModelProvider.notifier);
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -63,6 +69,8 @@ class _MyEventAddStep3PageState extends State<MyEventAddStep3Page> {
             children: [
               const StepProgressBar(currentStep: 3),
               const SizedBox(height: 24),
+
+              // 📝 안내 문구
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: Row(
@@ -102,18 +110,21 @@ class _MyEventAddStep3PageState extends State<MyEventAddStep3Page> {
                 ),
               ),
               const SizedBox(height: 24),
+
+              // ✏️ 이름 입력 필드들
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: Column(
                     children: [
-                      ...List.generate(vm.flowerControllers.length, (index) {
-                        final controller = vm.flowerControllers[index];
+                      ...List.generate(state.flowerFriendNames.length, (index) {
+                        final controller = notifier.flowerControllers[index];
                         return Padding(
                           padding: const EdgeInsets.only(bottom: 24),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // 이름 상단 타이틀
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
@@ -127,9 +138,10 @@ class _MyEventAddStep3PageState extends State<MyEventAddStep3Page> {
                                       fontFamily: 'Pretendard',
                                     ),
                                   ),
-                                  if (vm.flowerControllers.length > 1)
+                                  if (state.flowerFriendNames.length > 1)
                                     GestureDetector(
-                                      onTap: () => vm.removeFlowerFriend(index),
+                                      onTap: () =>
+                                          notifier.removeFlowerFriend(index),
                                       child: const Text(
                                         '삭제',
                                         style: TextStyle(
@@ -143,6 +155,8 @@ class _MyEventAddStep3PageState extends State<MyEventAddStep3Page> {
                                 ],
                               ),
                               const SizedBox(height: 8),
+
+                              // 텍스트 필드
                               CustomTextField(
                                 config: TextFieldConfig(
                                   controller: controller,
@@ -151,8 +165,9 @@ class _MyEventAddStep3PageState extends State<MyEventAddStep3Page> {
                                   readOnlyOverride: false,
                                   maxLength: 10,
                                   onChanged: (text) =>
-                                      vm.updateFlowerName(index, text),
-                                  onClear: () => vm.clearFlowerName(index),
+                                      notifier.updateFlowerName(index, text),
+                                  onClear: () =>
+                                      notifier.clearFlowerName(index),
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -172,8 +187,10 @@ class _MyEventAddStep3PageState extends State<MyEventAddStep3Page> {
                           ),
                         );
                       }),
+
+                      // ➕ 추가 버튼
                       GestureDetector(
-                        onTap: vm.addFlowerFriend,
+                        onTap: notifier.addFlowerFriend,
                         child: SvgPicture.asset(
                           'assets/icons/btn_add_lg.svg',
                           width: 48,
@@ -185,6 +202,8 @@ class _MyEventAddStep3PageState extends State<MyEventAddStep3Page> {
                   ),
                 ),
               ),
+
+              // ✅ 다음 버튼
               BottomFixedButtonContainer(
                 child: BlackFillButton(
                   text: '다음',

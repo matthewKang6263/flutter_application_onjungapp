@@ -1,173 +1,187 @@
+// 📁 lib/viewmodels/detail_record/detail_record_view_model.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_application_onjungapp/models/enums/event_type_filters.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_application_onjungapp/models/enums/attendance_type.dart';
+import 'package:flutter_application_onjungapp/models/enums/event_type.dart';
+import 'package:flutter_application_onjungapp/models/enums/method_type.dart';
+import 'package:flutter_application_onjungapp/models/enums/relation_type.dart';
+import 'package:flutter_application_onjungapp/models/event_record_model.dart';
+import 'package:flutter_application_onjungapp/models/friend_model.dart';
+import 'package:flutter_application_onjungapp/repositories/event_record_repository.dart';
+import 'package:flutter_application_onjungapp/repositories/friend_repository.dart';
 
-/// 📦 상세 내역 뷰모델 (읽기/편집 모드 전환 및 입력값 관리)
 class DetailRecordViewModel extends ChangeNotifier {
-  // 📌 모드 상태 (true: 편집, false: 읽기)
+  final String recordId;
+
+  final _eventRepo = EventRecordRepository();
+  final _friendRepo = FriendRepository();
+
   bool isEditMode = false;
+  EventRecord? _record;
+  Friend? _friend;
 
-  // 📌 상단 이름 / 관계 정보
-  late String name;
-  late String relation;
-
-  // 📌 금액 필드
   late TextEditingController amountController;
-  late FocusNode amountFocus;
-
-  // 📌 메모 필드
   late TextEditingController memoController;
-  late FocusNode memoFocus;
-
-  // 📌 날짜 필드
   late TextEditingController dateController;
+
+  late FocusNode amountFocus;
+  late FocusNode memoFocus;
   DateTime? selectedDate;
-
-  // 📌 선택형 항목들
-  String direction = ''; // 보냄 / 받음
-  String eventType = ''; // 결혼식, 돌잔치, 생일 등
-  String method = ''; // 현금 / 이체 / 선물
-  String attendance = ''; // 참석 / 미참석
-
-  // 📌 날짜 선택 후 unfocus 처리를 위한 context 저장용
   BuildContext? _context;
 
-  /// ✅ getter: 금액 숫자값
-  String get amount => amountController.text.trim();
-
-  /// ✅ getter: 메모 내용
-  String get memo => memoController.text.trim();
-
-  /// ✅ getter: 날짜 텍스트 (사용자용 포맷)
-  String get date => dateController.text.trim();
-
-  /// ✅ getter: 날짜 DateTime
-  DateTime? get dateValue => selectedDate;
-
-  /// ✅ dateText로도 접근 가능하도록 호환용 getter
-  String get dateText => date;
-
-  /// ✅ ViewModel 초기화 (DetailRecordPage 진입 시 사용)
-  void initializeFrom({
-    required String name,
-    required String relation,
-    required String amount,
-    required String direction,
-    required String eventType,
-    required String date,
-    required String method,
-    required String attendance,
-    required String memo,
-  }) {
-    this.name = name;
-    this.relation = relation;
-    this.direction = direction;
-    this.eventType = eventType;
-    this.method = method;
-    this.attendance = attendance;
-
-    amountController = TextEditingController(text: amount);
-    amountFocus = FocusNode();
-
-    memoController = TextEditingController(text: memo);
-    memoFocus = FocusNode();
-
-    dateController = TextEditingController(text: date);
-    selectedDate = _parseDate(date);
+  DetailRecordViewModel(this.recordId) {
+    _load();
   }
 
-  /// ✅ 편집 모드 전환
+  EventRecord? get record => _record;
+
+  String get name => _friend?.name ?? '-';
+  String get relation => _friend?.relation?.label ?? '-';
+
+  String get direction => _record?.isSent == true ? '보냄' : '받음';
+  String get eventType => _record?.eventType?.label ?? '-';
+  String get method => _record?.method?.label ?? '-';
+  String get attendance => _record?.attendance?.label ?? '-';
+
+  String get amount => amountController.text.trim();
+  String get memo => memoController.text.trim();
+  String get date => dateController.text.trim();
+  DateTime? get dateValue => selectedDate;
+  String get dateText => date;
+
+  Future<void> _load() async {
+    try {
+      final data = await _eventRepo.getById(recordId);
+      if (data != null) {
+        _record = data;
+        _friend = await _friendRepo.getById(data.friendId);
+
+        amountController =
+            TextEditingController(text: _formatAmount(data.amount));
+        memoController = TextEditingController(text: data.memo ?? '');
+        dateController = TextEditingController(text: _formatDate(data.date));
+        selectedDate = data.date;
+      } else {
+        amountController = TextEditingController();
+        memoController = TextEditingController();
+        dateController = TextEditingController();
+      }
+
+      amountFocus = FocusNode();
+      memoFocus = FocusNode();
+      notifyListeners();
+    } catch (e) {
+      debugPrint('❌ 상세 내역 로딩 실패: $e');
+    }
+  }
+
   void setEditMode(bool value) {
     isEditMode = value;
     notifyListeners();
   }
 
-  /// ✅ 직접 notify 호출할 때
-  void notify() => notifyListeners();
+  void setContext(BuildContext context) {
+    _context = context;
+  }
 
-  /// ✅ 금액 빠른 추가 버튼 처리 (천 단위 쉼표 포함)
+  void unfocusAllFields() {
+    if (_context != null) FocusScope.of(_context!).unfocus();
+  }
+
   void addAmount(int value) {
     final raw = amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
     final current = int.tryParse(raw) ?? 0;
     final updated = current + value;
-    amountController.text = NumberFormat('#,###').format(updated);
+    amountController.text = _formatAmount(updated);
     notifyListeners();
   }
 
-  /// ✅ 날짜 설정
   void setDate(DateTime date) {
     selectedDate = date;
     dateController.text = _formatDate(date);
     notifyListeners();
   }
 
-  /// ✅ 날짜 초기화
   void clearDate() {
     selectedDate = null;
     dateController.clear();
     notifyListeners();
   }
 
-  /// ✅ 선택형 필드 변경 메서드
   void setDirection(String value) {
-    direction = value;
-    notifyListeners();
-  }
-
-  void setEventType(String value) {
-    eventType = value;
+    _record = _record?.copyWith(isSent: value == '보냄');
     notifyListeners();
   }
 
   void setMethod(String value) {
-    method = value;
+    final method = MethodTypeParser.fromLabel(value);
+    _record = _record?.copyWith(method: method);
     notifyListeners();
   }
 
   void setAttendance(String value) {
-    attendance = value;
+    final attendance = AttendanceTypeParser.fromLabel(value);
+    _record = _record?.copyWith(attendance: attendance);
     notifyListeners();
   }
 
-  /// ✅ 외부에서 context 저장 (날짜 선택 후 unfocus용)
-  void setContext(BuildContext context) {
-    _context = context;
+  void setEventType(String value) {
+    final eventType = EventTypeParser.fromLabel(value);
+    _record = _record?.copyWith(eventType: eventType); // ✅ 이름 일치
+    notifyListeners();
   }
 
-  /// ✅ 모든 포커스를 해제하는 메서드
-  void unfocusAllFields() {
-    if (_context != null) {
-      FocusScope.of(_context!).unfocus();
-    }
-  }
+  void notify() => notifyListeners();
 
-  /// ✅ 날짜 포맷 (yyyy년 M월 d일 (E))
-  String _formatDate(DateTime date) {
-    return DateFormat('yyyy년 M월 d일 (E)', 'ko').format(date);
-  }
+  Future<void> save() async {
+    if (_record == null) return;
 
-  /// ✅ 문자열 날짜 -> DateTime 파싱
-  DateTime? _parseDate(String dateStr) {
+    final updated = _record!.copyWith(
+      amount: int.tryParse(amount.replaceAll(',', '')) ?? 0,
+      memo: memo,
+      date: selectedDate ?? _record!.date,
+      updatedAt: DateTime.now(),
+    );
     try {
-      return DateFormat('yyyy년 M월 d일 (E)', 'ko').parse(dateStr);
-    } catch (_) {
-      return null;
+      await _eventRepo.update(updated);
+      _record = updated;
+      setEditMode(false);
+      debugPrint('✅ 저장 완료: $recordId');
+    } catch (e) {
+      debugPrint('❌ 저장 실패: $e');
     }
   }
 
-  /// ✅ 저장 처리 (향후 DB 반영 시 여기에 연결)
-  void save() {
-    setEditMode(false); // 저장 후 읽기 모드로 전환
-    // TODO: 저장 처리 로직 추가
+  Future<void> delete() async {
+    try {
+      await _eventRepo.delete(recordId);
+      debugPrint('🗑️ 삭제 완료: $recordId');
+    } catch (e) {
+      debugPrint('❌ 삭제 실패: $e');
+    }
   }
 
-  /// ✅ 리소스 해제
+  String _formatAmount(int amount) => NumberFormat('#,###').format(amount);
+
+  String _formatDate(DateTime date) =>
+      DateFormat('yyyy년 M월 d일 (E)', 'ko').format(date);
+
   @override
   void dispose() {
     amountController.dispose();
-    amountFocus.dispose();
     memoController.dispose();
-    memoFocus.dispose();
     dateController.dispose();
+    amountFocus.dispose();
+    memoFocus.dispose();
     super.dispose();
   }
 }
+
+/// ✅ Riverpod NotifierProvider 선언
+final detailRecordViewModelProvider =
+    ChangeNotifierProvider.family<DetailRecordViewModel, String>(
+        (ref, recordId) {
+  return DetailRecordViewModel(recordId);
+});

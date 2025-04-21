@@ -1,30 +1,38 @@
-// 📁 lib/pages/record/views/detail_record_read_view.dart
+// 📁 lib/pages/detail_record/view/detail_record_read_view.dart
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:flutter_application_onjungapp/viewmodels/detail_record/detail_record_view_model.dart';
-import 'package:flutter_application_onjungapp/components/dividers/thin_divider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
-/// 📄 상세 내역 읽기 모드 전용 뷰
-class DetailRecordReadView extends StatelessWidget {
-  const DetailRecordReadView({super.key});
+import 'package:flutter_application_onjungapp/components/dividers/thin_divider.dart';
+import 'package:flutter_application_onjungapp/viewmodels/detail_record/detail_record_view_model.dart';
+
+/// 📄 상세 내역 읽기 전용 뷰
+class DetailRecordReadView extends ConsumerWidget {
+  final String recordId;
+  const DetailRecordReadView({super.key, required this.recordId});
 
   @override
-  Widget build(BuildContext context) {
-    final viewModel = context.watch<DetailRecordViewModel>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final vm = ref.watch(detailRecordViewModelProvider(recordId));
 
-    final List<Map<String, String>> detailItems = [
-      {'label': '구분', 'value': viewModel.direction},
-      {'label': '경조사', 'value': viewModel.eventType},
-      {'label': '날짜', 'value': viewModel.date},
-      {'label': '수단', 'value': viewModel.method},
-      {'label': '참석 여부', 'value': viewModel.attendance},
-      {'label': '메모', 'value': viewModel.memo},
+    if (vm.record == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // 출력할 레이블·값 맵 리스트
+    final details = <Map<String, String>>[
+      {'label': '구분', 'value': vm.direction},
+      {'label': '경조사', 'value': vm.eventType},
+      {'label': '날짜', 'value': vm.date},
+      {'label': '수단', 'value': vm.method},
+      {'label': '참석 여부', 'value': vm.attendance},
+      {'label': '메모', 'value': vm.memo},
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // 🔹 상단 이름 + 관계 + 금액
+        // ── 헤더: 이름·관계·금액 ─────────────────────
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
           child: Column(
@@ -33,11 +41,10 @@ class DetailRecordReadView extends StatelessWidget {
               Row(
                 children: [
                   Text(
-                    viewModel.name,
+                    vm.name,
                     style: const TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w700,
-                      fontFamily: 'Pretendard',
                     ),
                   ),
                   const SizedBox(width: 4),
@@ -49,11 +56,10 @@ class DetailRecordReadView extends StatelessWidget {
                       borderRadius: BorderRadius.circular(1000),
                     ),
                     child: Text(
-                      viewModel.relation,
+                      vm.relation,
                       style: const TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w500,
-                        fontFamily: 'Pretendard',
                         color: Color(0xFFC9747D),
                       ),
                     ),
@@ -62,59 +68,48 @@ class DetailRecordReadView extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                '${viewModel.amount}원',
+                // intl로 천단위 콤마
+                '${NumberFormat.decimalPattern('ko').format(vm.record!.amount)}원',
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  fontFamily: 'Pretendard',
-                  color: Color(0xFF2A2928),
                 ),
               ),
             ],
           ),
         ),
 
-        // 🔹 세부 항목 리스트
-        ...detailItems.map(
-          (item) => Column(
-            children: [
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                child: Row(
-                  children: [
-                    SizedBox(
-                      width: 100,
-                      child: Text(
-                        item['label']!,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          fontFamily: 'Pretendard',
-                        ),
-                      ),
+        // ── 디테일 리스트 ──────────────────────────
+        for (var d in details) ...[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 100,
+                  child: Text(
+                    d['label']!,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        item['label'] == '금액'
-                            ? '${item['value']}원'
-                            : item['value'] ?? '',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                          fontFamily: 'Pretendard',
-                          color: Color(0xFF2A2928),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
-              const ThinDivider(),
-            ],
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    d['value'] ?? '',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
+          const ThinDivider(),
+        ],
       ],
     );
   }

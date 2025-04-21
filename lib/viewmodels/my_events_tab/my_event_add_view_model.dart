@@ -1,200 +1,192 @@
 // 📁 lib/viewmodels/my_events_tab/my_event_add_view_model.dart
 
 import 'package:flutter/material.dart';
-import 'package:flutter_application_onjungapp/models/friend_model.dart';
-import 'package:flutter_application_onjungapp/models/my_event_model.dart';
 import 'package:flutter_application_onjungapp/models/event_record_model.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 import 'package:flutter_application_onjungapp/models/enums/event_type.dart';
+import 'package:flutter_application_onjungapp/models/my_event_model.dart';
+import 'package:flutter_application_onjungapp/models/friend_model.dart';
 import 'package:flutter_application_onjungapp/repositories/friend_repository.dart';
 import 'package:flutter_application_onjungapp/repositories/my_event_repository.dart';
 import 'package:flutter_application_onjungapp/repositories/event_record_repository.dart';
-import 'package:uuid/uuid.dart';
 
-class MyEventAddViewModel extends ChangeNotifier {
-  // 🔹 Step 1 상태
-  final TextEditingController titleController = TextEditingController();
-  final FocusNode titleFocus = FocusNode();
+/// 🧠 경조사 추가 단계별 상태
+class MyEventAddState {
+  final EventType? selectedEventType;
+  final DateTime? selectedDate;
+  final List<Friend> friends;
+  final Set<String> selectedFriendIds;
+  final List<String> flowerFriendNames;
+  final bool isFriendLoading;
 
-  EventType? selectedEventType;
-  DateTime? selectedDate;
+  const MyEventAddState({
+    this.selectedEventType,
+    this.selectedDate,
+    this.friends = const [],
+    this.selectedFriendIds = const {},
+    this.flowerFriendNames = const [],
+    this.isFriendLoading = false,
+  });
 
-  bool get isStep1Complete =>
-      titleController.text.trim().isNotEmpty &&
-      selectedEventType != null &&
-      selectedDate != null;
-
-  void setEventType(EventType? type) {
-    selectedEventType = type;
-    notifyListeners();
+  MyEventAddState copyWith({
+    EventType? selectedEventType,
+    DateTime? selectedDate,
+    List<Friend>? friends,
+    Set<String>? selectedFriendIds,
+    List<String>? flowerFriendNames,
+    bool? isFriendLoading,
+  }) {
+    return MyEventAddState(
+      selectedEventType: selectedEventType ?? this.selectedEventType,
+      selectedDate: selectedDate ?? this.selectedDate,
+      friends: friends ?? this.friends,
+      selectedFriendIds: selectedFriendIds ?? this.selectedFriendIds,
+      flowerFriendNames: flowerFriendNames ?? this.flowerFriendNames,
+      isFriendLoading: isFriendLoading ?? this.isFriendLoading,
+    );
   }
+}
 
-  void clearEventType() {
-    selectedEventType = null;
-    notifyListeners();
-  }
+/// 🧠 경조사 추가 뷰모델
+class MyEventAddViewModel extends Notifier<MyEventAddState> {
+  final titleController = TextEditingController();
+  final titleFocus = FocusNode();
+  final _friendRepo = FriendRepository();
+  final _eventRepo = MyEventRepository();
+  final _recordRepo = EventRecordRepository();
 
-  void setDate(DateTime date) {
-    selectedDate = date;
-    notifyListeners();
-  }
-
-  void clearDate() {
-    selectedDate = null;
-    notifyListeners();
-  }
-
-  void disposeControllers() {
-    titleController.dispose();
-    titleFocus.dispose();
-    for (var controller in flowerControllers) {
-      controller.dispose();
-    }
-  }
-
-  // 🔹 Step 2 상태
-  final FriendRepository _friendRepo = FriendRepository();
-
-  List<Friend> friends = [];
-  bool isFriendLoading = false;
-  Set<String> selectedFriendIds = {};
-
-  Future<void> loadFriendsForUser(String userId) async {
-    isFriendLoading = true;
-    notifyListeners();
-
-    try {
-      friends = await _friendRepo.getFriendsByOwner(userId);
-    } catch (e) {
-      print('🚨 친구 로딩 오류: $e');
-    }
-
-    isFriendLoading = false;
-    notifyListeners();
-  }
-
-  void toggleFriendSelection(String id) {
-    if (selectedFriendIds.contains(id)) {
-      selectedFriendIds.remove(id);
-    } else {
-      selectedFriendIds.add(id);
-    }
-    notifyListeners();
-  }
-
-  void toggleSelectAllFriends() {
-    if (selectedFriendIds.length == friends.length) {
-      selectedFriendIds.clear();
-    } else {
-      selectedFriendIds = friends.map((f) => f.id).toSet();
-    }
-    notifyListeners();
-  }
-
-  void setSelectedFriendIds(Set<String> ids) {
-    selectedFriendIds = ids;
-    notifyListeners();
-  }
-
-  // 🔹 Step 3: 화환 친구 이름 리스트
-  List<String> flowerFriendNames = [''];
   List<TextEditingController> flowerControllers = [];
 
+  @override
+  MyEventAddState build() => const MyEventAddState();
+
+  /// ▶︎ Step1 완료 여부: 제목/종류/날짜 모두 선택되었는지
+  bool get isStep1Complete =>
+      titleController.text.trim().isNotEmpty &&
+      state.selectedEventType != null &&
+      state.selectedDate != null;
+
+  /// ● 이벤트 종류 선택
+  void setEventType(EventType? t) =>
+      state = state.copyWith(selectedEventType: t);
+
+  /// 이벤트 종류 초기화
+  void clearEventType() => state = state.copyWith(selectedEventType: null);
+
+  /// ● 날짜 선택
+  void setDate(DateTime d) => state = state.copyWith(selectedDate: d);
+
+  /// 날짜 초기화
+  void clearDate() => state = state.copyWith(selectedDate: null);
+
+  /// ● 친구 목록 로드 (Step2)
+  Future<void> loadFriends(String userId) async {
+    state = state.copyWith(isFriendLoading: true);
+    try {
+      final list = await _friendRepo.getAll(userId);
+      state = state.copyWith(friends: list, isFriendLoading: false);
+    } catch (_) {
+      state = state.copyWith(isFriendLoading: false);
+    }
+  }
+
+  /// ● 친구 선택/해제 토글
+  void toggleFriend(String id) {
+    final set = {...state.selectedFriendIds};
+    set.contains(id) ? set.remove(id) : set.add(id);
+    state = state.copyWith(selectedFriendIds: set);
+  }
+
+  /// 2단계: 선택된 친구 ID 집합을 한 번에 설정
+  void setSelectedFriendIds(Set<String> ids) {
+    state = state.copyWith(selectedFriendIds: ids);
+  }
+
+  /// 2단계: 전체 선택/전체 해제 토글
+  void toggleSelectAll() {
+    final allIds = state.friends.map((f) => f.id).toSet();
+    final isAllSelected = state.selectedFriendIds.length == allIds.length;
+    state = state.copyWith(
+      selectedFriendIds: isAllSelected ? <String>{} : allIds,
+    );
+  }
+
+  /// ● 화환 컨트롤러 초기화 (Step3)
   void initFlowerControllers() {
-    flowerControllers = flowerFriendNames
-        .map((name) => TextEditingController(text: name))
+    flowerControllers = state.flowerFriendNames
+        .map((n) => TextEditingController(text: n))
         .toList();
+    if (flowerControllers.isEmpty) {
+      flowerControllers.add(TextEditingController());
+    }
   }
 
+  /// ● 화환 친구 추가/제거
   void addFlowerFriend() {
-    flowerFriendNames.add('');
     flowerControllers.add(TextEditingController());
-    notifyListeners();
+    state = state.copyWith(flowerFriendNames: [...state.flowerFriendNames, '']);
   }
 
-  void removeFlowerFriend(int index) {
-    flowerFriendNames.removeAt(index);
-    flowerControllers[index].dispose();
-    flowerControllers.removeAt(index);
-    notifyListeners();
+  void removeFlowerFriend(int i) {
+    flowerControllers[i].dispose();
+    flowerControllers.removeAt(i);
+    final names = [...state.flowerFriendNames]..removeAt(i);
+    state = state.copyWith(flowerFriendNames: names);
   }
 
-  void updateFlowerName(int index, String name) {
-    flowerFriendNames[index] = name;
-    notifyListeners();
+  void updateFlowerName(int i, String v) {
+    final names = [...state.flowerFriendNames];
+    names[i] = v;
+    state = state.copyWith(flowerFriendNames: names);
   }
 
-  void clearFlowerName(int index) {
-    flowerControllers[index].clear();
-    flowerFriendNames[index] = '';
-    notifyListeners();
+  /// 인덱스 i 의 화환 친구 이름만 비우고, 필드는 남겨둡니다.
+  void clearFlowerName(int i) {
+    // 1) 컨트롤러 텍스트 클리어
+    flowerControllers[i].clear();
+
+    // 2) 상태의 리스트에서도 해당 인덱스만 빈 문자열로 바꿔 줍니다.
+    final names = [...state.flowerFriendNames];
+    if (i < names.length) {
+      names[i] = '';
+      state = state.copyWith(flowerFriendNames: names);
+    }
   }
 
-  // 🔹 저장 로직
-  final MyEventRepository _eventRepo = MyEventRepository();
-  final EventRecordRepository _recordRepo = EventRecordRepository();
-
+  /// ● 최종 이벤트 생성 & 저장
   Future<MyEvent?> submit(String userId) async {
     if (!isStep1Complete) return null;
-
     final now = DateTime.now();
     final id = const Uuid().v4();
-
     final event = MyEvent(
       id: id,
       title: titleController.text.trim(),
-      eventType: selectedEventType!,
-      date: selectedDate!,
+      eventType: state.selectedEventType!,
+      date: state.selectedDate!,
       createdBy: userId,
       createdAt: now,
       updatedAt: now,
-      recordIds: selectedFriendIds.toList(),
+      recordIds: state.selectedFriendIds.toList(),
       flowerFriendNames: flowerControllers
           .map((c) => c.text.trim())
-          .where((t) => t.isNotEmpty)
+          .where((s) => s.isNotEmpty)
           .toList(),
     );
 
     try {
-      await _eventRepo.addMyEvent(event);
-      return event;
-    } catch (e) {
-      print('🚨 MyEvent 저장 실패: $e');
-      return null;
-    }
-  }
+      // 1) MyEvent 저장
+      await _eventRepo.add(event);
 
-  Future<MyEvent?> submitAll(String userId) async {
-    if (!isStep1Complete) return null;
-
-    final now = DateTime.now();
-    final eventId = const Uuid().v4();
-
-    final event = MyEvent(
-      id: eventId,
-      title: titleController.text.trim(),
-      eventType: selectedEventType!,
-      date: selectedDate!,
-      createdBy: userId,
-      createdAt: now,
-      updatedAt: now,
-      recordIds: selectedFriendIds.toList(),
-      flowerFriendNames: flowerControllers
-          .map((c) => c.text.trim())
-          .where((t) => t.isNotEmpty)
-          .toList(),
-    );
-
-    try {
-      await _eventRepo.addMyEvent(event);
-
-      for (final friendId in selectedFriendIds) {
-        final record = EventRecord(
+      // 2) 선택된 친구 수만큼 EventRecord 자동 생성
+      for (final friendId in state.selectedFriendIds) {
+        final rec = EventRecord(
           id: const Uuid().v4(),
           friendId: friendId,
-          eventId: eventId,
-          eventType: event.eventType, // ✅ 여기에 추가!
+          eventId: id,
+          eventType: state.selectedEventType!,
           amount: 0,
-          date: event.date,
+          date: state.selectedDate!,
           isSent: false,
           method: null,
           attendance: null,
@@ -203,13 +195,25 @@ class MyEventAddViewModel extends ChangeNotifier {
           createdAt: now,
           updatedAt: now,
         );
-        await _recordRepo.addEventRecord(record);
+        await _recordRepo.add(rec);
       }
 
       return event;
     } catch (e) {
-      print('🚨 전체 저장 실패: $e');
+      debugPrint('🚨 이벤트 생성 실패: $e');
       return null;
     }
   }
+
+  /// ● 리소스 정리
+  void disposeControllers() {
+    titleController.dispose();
+    titleFocus.dispose();
+    for (final c in flowerControllers) c.dispose();
+  }
 }
+
+/// 🔹 Provider 등록
+final myEventAddViewModelProvider =
+    NotifierProvider<MyEventAddViewModel, MyEventAddState>(
+        MyEventAddViewModel.new);

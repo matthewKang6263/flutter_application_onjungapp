@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
-import 'package:provider/provider.dart';
+// 📁 lib/pages/my_events_tab/my_event_add/my_event_add_step2_page.dart
 
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_application_onjungapp/components/app_bar/custom_sub_app_bar.dart';
 import 'package:flutter_application_onjungapp/components/bar/step_progress_bar.dart';
 import 'package:flutter_application_onjungapp/components/bottom_buttons/bottom_fixed_button_container.dart';
@@ -9,42 +10,30 @@ import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/
 import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/disabled_button.dart';
 import 'package:flutter_application_onjungapp/components/dividers/thick_divider.dart';
 import 'package:flutter_application_onjungapp/components/wrappers/cupertino_touch_wrapper.dart';
-
 import 'package:flutter_application_onjungapp/pages/my_events_tab/my_event_add/my_event_add_step3_page.dart';
 import 'package:flutter_application_onjungapp/pages/my_events_tab/widgets/my_event_friend_list_item.dart';
 import 'package:flutter_application_onjungapp/pages/search/search_event_person_page.dart';
 import 'package:flutter_application_onjungapp/viewmodels/my_events_tab/my_event_add_view_model.dart';
 
-class MyEventAddStep2Page extends StatelessWidget {
+class MyEventAddStep2Page extends ConsumerStatefulWidget {
   const MyEventAddStep2Page({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Consumer<MyEventAddViewModel>(
-      builder: (context, vm, _) {
-        return const _MyEventAddStep2Body();
-      },
-    );
-  }
+  ConsumerState<MyEventAddStep2Page> createState() =>
+      _MyEventAddStep2PageState();
 }
 
-class _MyEventAddStep2Body extends StatefulWidget {
-  const _MyEventAddStep2Body();
-
-  @override
-  State<_MyEventAddStep2Body> createState() => _MyEventAddStep2BodyState();
-}
-
-class _MyEventAddStep2BodyState extends State<_MyEventAddStep2Body> {
+class _MyEventAddStep2PageState extends ConsumerState<MyEventAddStep2Page> {
   @override
   void initState() {
     super.initState();
-    // ❗ Friend 리스트 불러오기 (초기화)
-    context.read<MyEventAddViewModel>().loadFriendsForUser('test-user');
+    ref.read(myEventAddViewModelProvider.notifier).loadFriends('test-user');
   }
 
   Future<void> _openSearchPage() async {
-    final vm = context.read<MyEventAddViewModel>();
+    final vm = ref.read(myEventAddViewModelProvider);
+    final notifier = ref.read(myEventAddViewModelProvider.notifier);
+
     final updated = await Navigator.push<Set<String>>(
       context,
       MaterialPageRoute(
@@ -56,13 +45,14 @@ class _MyEventAddStep2BodyState extends State<_MyEventAddStep2Body> {
     );
 
     if (updated != null) {
-      vm.setSelectedFriendIds(updated);
+      notifier.setSelectedFriendIds(updated);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<MyEventAddViewModel>();
+    final vm = ref.watch(myEventAddViewModelProvider);
+    final notifier = ref.read(myEventAddViewModelProvider.notifier);
 
     if (vm.isFriendLoading) {
       return const Scaffold(
@@ -187,7 +177,7 @@ class _MyEventAddStep2BodyState extends State<_MyEventAddStep2Body> {
                               mainAxisAlignment: MainAxisAlignment.end,
                               children: [
                                 CupertinoTouchWrapper(
-                                  onTap: () => vm.toggleSelectAllFriends(),
+                                  onTap: notifier.toggleSelectAll,
                                   child: Row(
                                     children: [
                                       Text(
@@ -232,7 +222,7 @@ class _MyEventAddStep2BodyState extends State<_MyEventAddStep2Body> {
                     return MyEventFriendListItem(
                       friend: friend,
                       isSelected: isSelected,
-                      onTap: () => vm.toggleFriendSelection(friend.id),
+                      onTap: () => notifier.toggleFriend(friend.id),
                     );
                   },
                 ),

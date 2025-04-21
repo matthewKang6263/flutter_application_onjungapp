@@ -1,61 +1,53 @@
+// 📁 lib/pages/friends_tab/detail_friends/friends_detail_profile_page.dart
+
 import 'package:flutter/material.dart';
+import 'package:flutter_application_onjungapp/models/enums/relation_type.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_application_onjungapp/viewmodels/friends_tab/profile/friend_profile_view_model.dart';
+import 'package:flutter_application_onjungapp/viewmodels/friends_tab/profile/friend_profile_edit_view_model.dart';
 import 'package:flutter_application_onjungapp/components/bottom_buttons/bottom_fixed_button_container.dart';
 import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/black_fill_button.dart';
 import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/black_outline_button.dart';
 import 'package:flutter_application_onjungapp/components/dialogs/confirm_action_dialog.dart';
-import 'package:flutter_application_onjungapp/models/enums/relation_type.dart';
-import 'package:flutter_application_onjungapp/pages/friends_tab/detail_friends/view/detail_profile_edit_view.dart';
 import 'package:flutter_application_onjungapp/pages/friends_tab/detail_friends/view/detail_profile_read_view.dart';
+import 'package:flutter_application_onjungapp/pages/friends_tab/detail_friends/view/detail_profile_edit_view.dart';
 
-/// 📄 친구 상세 프로필 메인 페이지 (상세 내역 페이지 구조 참고)
-class FriendsDetailProfilePage extends StatefulWidget {
-  final String name;
-  final String phone;
-  final RelationType relation;
-  final String memo;
-
-  final void Function(
-    String newName,
-    String newPhone,
-    RelationType newRelation,
-    String newMemo,
-  )? onSave;
+/// 👤 친구 상세 프로필 페이지
+/// - 읽기/편집 모드 전환, 삭제, 저장 처리
+class FriendsDetailProfilePage extends ConsumerStatefulWidget {
+  final String friendId;
 
   const FriendsDetailProfilePage({
     super.key,
-    required this.name,
-    required this.phone,
-    required this.relation,
-    required this.memo,
-    this.onSave,
+    required this.friendId,
   });
 
   @override
-  State<FriendsDetailProfilePage> createState() =>
+  ConsumerState<FriendsDetailProfilePage> createState() =>
       _FriendsDetailProfilePageState();
 }
 
-class _FriendsDetailProfilePageState extends State<FriendsDetailProfilePage> {
+class _FriendsDetailProfilePageState
+    extends ConsumerState<FriendsDetailProfilePage> {
   bool isEditMode = false;
 
+  // 컨트롤러/포커스 노드
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   late TextEditingController _memoController;
-
-  late FocusNode _nameFocus;
-  late FocusNode _phoneFocus;
-  late FocusNode _memoFocus;
-
-  late RelationType _selectedRelation;
+  late FocusNode _nameFocus, _phoneFocus, _memoFocus;
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.name);
-    _phoneController = TextEditingController(text: widget.phone);
-    _memoController = TextEditingController(text: widget.memo);
-    _selectedRelation = widget.relation;
-
+    // 프로필 로드
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(friendProfileViewModelProvider.notifier).load(widget.friendId);
+    });
+    // 컨트롤러 초기화
+    _nameController = TextEditingController();
+    _phoneController = TextEditingController();
+    _memoController = TextEditingController();
     _nameFocus = FocusNode();
     _phoneFocus = FocusNode();
     _memoFocus = FocusNode();
@@ -72,32 +64,42 @@ class _FriendsDetailProfilePageState extends State<FriendsDetailProfilePage> {
     super.dispose();
   }
 
+  /// 편집 모드 토글
   void _toggleEditMode() {
+    final profile = ref.read(friendProfileViewModelProvider);
+    if (!isEditMode && profile.friend != null) {
+      // 기존 값 로드
+      ref
+          .read(friendProfileEditViewModelProvider.notifier)
+          .load(profile.friend!);
+    }
     setState(() => isEditMode = !isEditMode);
   }
 
-  void _handleSave() {
-    widget.onSave?.call(
-      _nameController.text,
-      _phoneController.text,
-      _selectedRelation,
-      _memoController.text,
-    );
-    _toggleEditMode();
+  /// 저장 처리
+  Future<void> _save() async {
+    final profile = ref.read(friendProfileViewModelProvider);
+    final editVm = ref.read(friendProfileEditViewModelProvider.notifier);
+    final friend = profile.friend!;
+    await editVm.save(friend.ownerId, friend.id);
+    // 다시 로드
+    await ref.read(friendProfileViewModelProvider.notifier).load(friend.id);
+    setState(() => isEditMode = false);
   }
 
-  void _showDeleteModal() {
+  /// 삭제 확인 다이얼로그
+  void _confirmDelete() {
     showDialog(
       context: context,
-      barrierDismissible: true,
       builder: (_) => ConfirmActionDialog(
-        title: '내역을 삭제하시겠어요?',
+        title: '친구를 삭제하시겠습니까?',
         cancelText: '취소',
         confirmText: '삭제',
         onCancel: () => Navigator.pop(context),
-        onConfirm: () {
+        onConfirm: () async {
           Navigator.pop(context);
-          // TODO: 실제 삭제 로직 연결
+          await ref.read(friendProfileViewModelProvider.notifier).delete();
+          if (mounted) Navigator.pop(context);
         },
       ),
     );
@@ -105,71 +107,89 @@ class _FriendsDetailProfilePageState extends State<FriendsDetailProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    final profileState = ref.watch(friendProfileViewModelProvider);
+    final editState = ref.watch(friendProfileEditViewModelProvider);
+
+    // 로드 중 또는 데이터 없음
+    if (profileState.isLoading || profileState.friend == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: GestureDetector(
-          onTap: () => FocusScope.of(context).unfocus(), // 키보드 내리기
-          child: Column(
-            children: [
-              /// 🔹 읽기 or 편집 뷰
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  child: isEditMode
-                      ? FriendsDetailProfileEditView(
-                          nameController: _nameController,
-                          phoneController: _phoneController,
-                          memoController: _memoController,
-                          nameFocus: _nameFocus,
-                          phoneFocus: _phoneFocus,
-                          memoFocus: _memoFocus,
-                          selectedRelation: _selectedRelation,
-                          onRelationChanged: (newType) =>
-                              setState(() => _selectedRelation = newType),
-                          onNameClear: () =>
-                              setState(() => _nameController.clear()),
-                          onPhoneClear: () =>
-                              setState(() => _phoneController.clear()),
-                          onMemoClear: () =>
-                              setState(() => _memoController.clear()),
-                        )
-                      : FriendsDetailProfileReadView(
-                          name: widget.name,
-                          phone: widget.phone,
-                          relation: widget.relation,
-                          memo: widget.memo,
-                        ),
-                ),
-              ),
-
-              /// 🔹 하단 버튼
-              BottomFixedButtonContainer(
+        child: Column(
+          children: [
+            // 메인 콘텐츠
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.only(bottom: 24),
                 child: isEditMode
-                    ? BlackFillButton(
-                        text: '저장',
-                        onTap: _handleSave,
+                    // ── 편집 모드
+                    ? FriendsDetailProfileEditView(
+                        nameController: _nameController..text = editState.name,
+                        phoneController: _phoneController
+                          ..text = editState.phone,
+                        memoController: _memoController
+                          ..text = editState.memo ?? '',
+                        nameFocus: _nameFocus,
+                        phoneFocus: _phoneFocus,
+                        memoFocus: _memoFocus,
+                        selectedRelation:
+                            editState.relation ?? RelationType.unset,
+                        onRelationChanged: (r) => ref
+                            .read(friendProfileEditViewModelProvider.notifier)
+                            .setRelation(r),
+                        onNameClear: () => ref
+                            .read(friendProfileEditViewModelProvider.notifier)
+                            .setName(''),
+                        onPhoneClear: () => ref
+                            .read(friendProfileEditViewModelProvider.notifier)
+                            .setPhone(''),
+                        onMemoClear: () => ref
+                            .read(friendProfileEditViewModelProvider.notifier)
+                            .setMemo(''),
                       )
-                    : Row(
-                        children: [
-                          Expanded(
-                            child: BlackOutlineButton(
-                              text: '삭제',
-                              onTap: _showDeleteModal,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: BlackFillButton(
-                              text: '편집',
-                              onTap: _toggleEditMode,
-                            ),
-                          ),
-                        ],
+                    // ── 읽기 모드
+                    : FriendsDetailProfileReadView(
+                        name: profileState.friend!.name,
+                        phone: profileState.friend!.phone ?? '',
+                        relation:
+                            profileState.friend!.relation ?? RelationType.unset,
+                        memo: profileState.friend!.memo ?? '',
                       ),
               ),
-            ],
-          ),
+            ),
+            // 하단 버튼
+            BottomFixedButtonContainer(
+              child: isEditMode
+                  // 저장 버튼
+                  ? BlackFillButton(
+                      text: '저장',
+                      onTap: _save,
+                    )
+                  // 삭제 · 편집 토글 버튼
+                  : Row(
+                      children: [
+                        Expanded(
+                          child: BlackOutlineButton(
+                            text: '삭제',
+                            onTap: _confirmDelete,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: BlackFillButton(
+                            text: '편집',
+                            onTap: _toggleEditMode,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ],
         ),
       ),
     );

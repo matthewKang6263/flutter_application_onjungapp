@@ -1,71 +1,67 @@
+// 📁 lib/pages/auth/splash_page.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_application_onjungapp/viewmodels/auth/user_view_model.dart';
-import 'package:provider/provider.dart';
 
-class SplashPage extends StatefulWidget {
-  const SplashPage({super.key});
+/// 🔹 앱 실행 시 첫 화면으로, 사용자 정보 복원 후 라우팅 처리
+class SplashPage extends ConsumerStatefulWidget {
+  const SplashPage({Key? key}) : super(key: key);
 
   @override
-  State<SplashPage> createState() => _SplashPageState();
+  ConsumerState<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> {
+class _SplashPageState extends ConsumerState<SplashPage> {
   @override
   void initState() {
     super.initState();
-    _initialize();
+    _initializeApp();
   }
 
-  Future<void> _initialize() async {
-    final userViewModel = context.read<UserViewModel>();
+  /// ⚙️ 앱 초기화 로직
+  Future<void> _initializeApp() async {
+    final userVM = ref.read(userViewModelProvider.notifier);
 
-    // 로그인 정보 복원 시도
-    await userViewModel.restoreUserFromPrefs();
-    debugPrint("🔄 복원된 uid: ${userViewModel.uid}");
+    // 1) SharedPreferences에서 로그인 정보 복원
+    await userVM.restoreUserFromPrefs();
+    debugPrint('🔄 복원된 UID: ${ref.read(userViewModelProvider).uid}');
 
-    // 2초 대기 후 홈 또는 로그인 이동
+    // 2) 스플래시 화면 최소 노출 시간
     await Future.delayed(const Duration(seconds: 2));
-
     if (!mounted) return;
 
-    final message = ModalRoute.of(context)?.settings.arguments as String?;
-
-    // 메시지 전달 여부 확인 → Snackbar 표시
-    if (message != null && message.isNotEmpty) {
+    // 3) 만약 arguments로 메시지가 전달되었다면 스낵바로 표시
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is String && args.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(args)));
       });
     }
 
+    // 4) 로그인 상태에 따라 이동
+    final isLoggedIn = ref.read(userViewModelProvider).isLoggedIn;
     Navigator.pushReplacementNamed(
       context,
-      userViewModel.isLoggedIn ? '/home' : '/login',
+      isLoggedIn ? '/home' : '/login',
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      backgroundColor: Color(0xFFC9885C), // 피그마 배경색
+      backgroundColor: Color(0xFFC9885C),
       body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(
-              child: Center(
-                child: Text(
-                  '온정',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Pretendard',
-                    color: Colors.white,
-                  ),
-                ),
-              ),
+        child: Center(
+          child: Text(
+            '온정',
+            style: TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              fontFamily: 'Pretendard',
+              color: Colors.white,
             ),
-          ],
+          ),
         ),
       ),
     );

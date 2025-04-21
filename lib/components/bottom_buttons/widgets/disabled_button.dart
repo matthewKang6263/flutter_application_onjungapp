@@ -1,14 +1,13 @@
+// lib/components/bottom_buttons/widgets/disabled_button.dart
+
 import 'package:flutter/material.dart';
 
-/// 비활성화된 회색 배경 버튼 위젯
-/// 클릭 이벤트는 없고 텍스트만 표시됩니다.
+/// 🔹 비활성화된 버튼
+/// - 클릭 불가, 회색 배경 + 흐린 텍스트
 class DisabledButton extends StatelessWidget {
-  final String text; // 버튼에 표시될 텍스트
+  final String text;
 
-  const DisabledButton({
-    super.key,
-    required this.text,
-  });
+  const DisabledButton({super.key, required this.text});
 
   @override
   Widget build(BuildContext context) {
@@ -16,26 +15,20 @@ class DisabledButton extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
       decoration: ShapeDecoration(
-        color: const Color(0xFFE9E5E1), // 비활성화 배경색
+        color: const Color(0xFFE9E5E1),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(1000),
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Text(
-            text,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Color(0xFFB5B1AA), // 흐린 회색 텍스트
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              fontFamily: 'Pretendard',
-            ),
-          ),
-        ],
+      child: Text(
+        text,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: Color(0xFFB5B1AA),
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          fontFamily: 'Pretendard',
+        ),
       ),
     );
   }

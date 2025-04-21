@@ -1,37 +1,39 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_application_onjungapp/components/app_bar/custom_sub_app_bar.dart';
 import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/black_fill_button.dart';
 import 'package:flutter_application_onjungapp/components/text_fields/custom_text_field.dart';
 import 'package:flutter_application_onjungapp/components/text_fields/text_field_config.dart';
 import 'package:flutter_application_onjungapp/components/text_fields/text_field_type.dart';
+import 'package:flutter_application_onjungapp/models/my_event_model.dart';
 import 'package:flutter_application_onjungapp/viewmodels/my_events_tab/my_event_detail_view_model.dart';
-import 'package:provider/provider.dart';
 
-class MyEventFlowerEditPage extends StatefulWidget {
-  const MyEventFlowerEditPage({super.key});
+class MyEventFlowerEditPage extends ConsumerStatefulWidget {
+  final MyEvent event;
+  const MyEventFlowerEditPage({super.key, required this.event});
 
   @override
-  State<MyEventFlowerEditPage> createState() => _MyEventFlowerEditPageState();
+  ConsumerState<MyEventFlowerEditPage> createState() =>
+      _MyEventFlowerEditPageState();
 }
 
-class _MyEventFlowerEditPageState extends State<MyEventFlowerEditPage> {
+class _MyEventFlowerEditPageState extends ConsumerState<MyEventFlowerEditPage> {
   final List<TextEditingController> _controllers = [];
   final List<FocusNode> _focusNodes = [];
 
   @override
   void initState() {
     super.initState();
+    final detailState = ref.read(
+      myEventDetailViewModelProvider(widget.event),
+    );
+    final initialNames = detailState.event?.flowerFriendNames ?? [];
 
-    final vm = context.read<MyEventDetailViewModel>();
-    final initialNames = vm.currentEvent.flowerFriendNames;
-
-    // 기존 화환 친구 불러오기
     for (final name in initialNames) {
       _addField(initialText: name);
     }
 
-    // 없으면 기본 1개
     if (_controllers.isEmpty) {
       _addField();
     }
@@ -68,16 +70,14 @@ class _MyEventFlowerEditPageState extends State<MyEventFlowerEditPage> {
   }
 
   void _onComplete() async {
-    final vm = context.read<MyEventDetailViewModel>();
-
-    // 빈 문자열 제외
+    final vm = ref.read(myEventDetailViewModelProvider(widget.event).notifier);
     final names = _controllers
         .map((c) => c.text.trim())
         .where((name) => name.isNotEmpty)
         .toList();
 
-    vm.updateFlowerFriendNames(names);
-    await vm.submitSummaryEdit(); // Firestore 저장
+    vm.updateFlowerNames(names);
+    await vm.saveSummary();
 
     if (mounted) Navigator.pop(context);
   }

@@ -1,14 +1,12 @@
-// 📁 lib/components/dividers/thin_divider.dart
+// lib/components/dividers/thin_divider.dart
+
 import 'package:flutter/material.dart';
 
-/// 얇은 회색 줄 Divider 컴포넌트
-/// - 색상: #E9E5E1
-/// - 높이: 1
-/// - 기본적으로 좌우 마진 16 적용
-/// - [hasMargin]을 false로 설정하면 마진 없이 전체 폭 사용 가능
+/// 🔹 얇은 회색 줄 Divider
+/// - 기본 좌우 마진 16, 높이 1
+/// - hasMargin=false 시 마진 제거
 class ThinDivider extends StatelessWidget {
   final bool hasMargin;
-
   const ThinDivider({super.key, this.hasMargin = true});
 
   @override

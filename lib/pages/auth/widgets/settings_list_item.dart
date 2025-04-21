@@ -1,7 +1,7 @@
+// 📁 lib/pages/auth/widgets/settings_list_item.dart
 import 'package:flutter/material.dart';
 
-/// 설정 페이지 내 항목들을 위한 공통 타일 위젯
-/// 텍스트 + 우측 아이콘 또는 텍스트 조합, 클릭 가능
+/// 🔹 설정 메뉴의 개별 아이템
 class SettingsListItem extends StatelessWidget {
   final String title;
   final Widget? trailing;

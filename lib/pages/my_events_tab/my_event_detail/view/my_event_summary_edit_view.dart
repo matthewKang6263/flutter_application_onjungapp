@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_application_onjungapp/components/custom_snack_bar.dart';
+import 'package:flutter_application_onjungapp/models/my_event_model.dart';
+import 'package:flutter_application_onjungapp/utils/date/date_formats.dart';
 import 'package:flutter_application_onjungapp/viewmodels/my_events_tab/my_events_view_model.dart';
-import 'package:provider/provider.dart';
-import 'package:flutter_application_onjungapp/utils/date_utils.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_application_onjungapp/components/buttons/add_friend_button.dart';
 import 'package:flutter_application_onjungapp/components/dividers/thin_divider.dart';
 import 'package:flutter_application_onjungapp/components/text_fields/custom_text_field.dart';
@@ -16,23 +17,27 @@ import 'package:flutter_application_onjungapp/models/enums/event_type.dart';
 import 'package:flutter_application_onjungapp/repositories/event_record_repository.dart';
 import 'package:flutter_application_onjungapp/repositories/my_event_repository.dart';
 
-class MyEventSummaryEditView extends StatefulWidget {
+class MyEventSummaryEditView extends ConsumerStatefulWidget {
+  final MyEvent event;
   final String title;
-  final DateTime initialDate;
-  final String initialEventType;
+  final DateTime? initialDate;
+  final String? initialEventType;
 
   const MyEventSummaryEditView({
     super.key,
+    required this.event,
     required this.title,
     required this.initialDate,
     required this.initialEventType,
   });
 
   @override
-  State<MyEventSummaryEditView> createState() => _MyEventSummaryEditViewState();
+  ConsumerState<MyEventSummaryEditView> createState() =>
+      _MyEventSummaryEditViewState();
 }
 
-class _MyEventSummaryEditViewState extends State<MyEventSummaryEditView> {
+class _MyEventSummaryEditViewState
+    extends ConsumerState<MyEventSummaryEditView> {
   late TextEditingController _nameController;
   late FocusNode _nameFocus;
   late TextEditingController _dateController;
@@ -47,9 +52,10 @@ class _MyEventSummaryEditViewState extends State<MyEventSummaryEditView> {
     _nameController = TextEditingController(text: widget.title);
     _nameFocus = FocusNode();
     _dateFocus = FocusNode();
-    _selectedDate = widget.initialDate;
-    _selectedEventType = widget.initialEventType;
-    _dateController = TextEditingController(text: _formatDate(_selectedDate));
+    _selectedDate = widget.initialDate ?? DateTime.now();
+    _selectedEventType = widget.initialEventType ?? '결혼식';
+    _dateController =
+        TextEditingController(text: formatFullDate(_selectedDate));
   }
 
   @override
@@ -61,42 +67,6 @@ class _MyEventSummaryEditViewState extends State<MyEventSummaryEditView> {
     super.dispose();
   }
 
-  String _formatDate(DateTime date) {
-    return formatFullDate(date);
-  }
-
-  Widget _buildEventTypeChip(String label) {
-    final isSelected = _selectedEventType == label;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() => _selectedEventType = label);
-          final vm = context.read<MyEventDetailViewModel>();
-          vm.updateEventType(
-              EventType.values.firstWhere((e) => e.label == label));
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color:
-                isSelected ? const Color(0xFFC9885C) : const Color(0xFFF9F4EE),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-              fontFamily: 'Pretendard',
-              color: isSelected ? Colors.white : const Color(0xFF2A2928),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   void _pickDate() async {
     final picked = await custom_picker.showDatePickerBottomSheet(
       context: context,
@@ -106,14 +76,16 @@ class _MyEventSummaryEditViewState extends State<MyEventSummaryEditView> {
     if (picked != null) {
       setState(() {
         _selectedDate = picked;
-        _dateController.text = _formatDate(picked);
+        _dateController.text = formatFullDate(picked);
       });
-      context.read<MyEventDetailViewModel>().updateDate(picked);
+      ref
+          .read(myEventDetailViewModelProvider(widget.event).notifier)
+          .updateDate(picked);
     }
     _dateFocus.unfocus();
   }
 
-  Future<void> _onDeletePressed() async {
+  void _onDeletePressed() async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -121,33 +93,38 @@ class _MyEventSummaryEditViewState extends State<MyEventSummaryEditView> {
         content: const Text('해당 경조사와 관련된 모든 내역이 삭제됩니다.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('취소'),
-          ),
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('취소')),
           TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('삭제'),
-          ),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('삭제')),
         ],
       ),
     );
 
     if (confirm != true) return;
 
-    final vm = context.read<MyEventDetailViewModel>();
-    final eventId = vm.currentEvent.id;
-    await MyEventRepository().deleteMyEvent(eventId);
-    await EventRecordRepository().deleteByEventId(eventId);
+    await MyEventRepository().delete(widget.event.id);
+    await EventRecordRepository().delete(widget.event.id);
 
     if (mounted) {
       Navigator.of(context).popUntil((route) => route.isFirst);
-      context.read<MyEventsViewModel>().loadMyEvents('test-user');
+      ref.read(myEventsViewModelProvider.notifier).loadAll('test-user');
       showOnjungSnackBar(context, '경조사 삭제가 완료되었습니다');
     }
   }
 
+  void _onEventTypeSelected(String label) {
+    setState(() => _selectedEventType = label);
+    ref
+        .read(myEventDetailViewModelProvider(widget.event).notifier)
+        .updateEventType(EventType.values.firstWhere((e) => e.label == label));
+  }
+
   @override
   Widget build(BuildContext context) {
+    final vm = ref.read(myEventDetailViewModelProvider(widget.event).notifier);
+
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
@@ -161,17 +138,7 @@ class _MyEventSummaryEditViewState extends State<MyEventSummaryEditView> {
               Row(
                 children: [
                   const SizedBox(
-                    width: 100,
-                    child: Text(
-                      '경조사 이름',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF2A2928),
-                        fontFamily: 'Pretendard',
-                      ),
-                    ),
-                  ),
+                      width: 100, child: Text('경조사 이름', style: _labelStyle)),
                   const SizedBox(width: 12),
                   Expanded(
                     child: CustomTextField(
@@ -179,17 +146,10 @@ class _MyEventSummaryEditViewState extends State<MyEventSummaryEditView> {
                         controller: _nameController,
                         focusNode: _nameFocus,
                         type: TextFieldType.eventTitle,
-                        isLarge: false,
-                        readOnlyOverride: false,
-                        maxLength: 10,
-                        onChanged: (text) => context
-                            .read<MyEventDetailViewModel>()
-                            .updateTitle(text),
+                        onChanged: (text) => vm.updateTitle(text),
                         onClear: () {
                           _nameController.clear();
-                          context
-                              .read<MyEventDetailViewModel>()
-                              .updateTitle('');
+                          vm.updateTitle('');
                           setState(() {});
                         },
                       ),
@@ -203,17 +163,7 @@ class _MyEventSummaryEditViewState extends State<MyEventSummaryEditView> {
               Row(
                 children: [
                   const SizedBox(
-                    width: 100,
-                    child: Text(
-                      '경조사',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF2A2928),
-                        fontFamily: 'Pretendard',
-                      ),
-                    ),
-                  ),
+                      width: 100, child: Text('경조사', style: _labelStyle)),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Row(
@@ -251,17 +201,7 @@ class _MyEventSummaryEditViewState extends State<MyEventSummaryEditView> {
               Row(
                 children: [
                   const SizedBox(
-                    width: 100,
-                    child: Text(
-                      '날짜',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF2A2928),
-                        fontFamily: 'Pretendard',
-                      ),
-                    ),
-                  ),
+                      width: 100, child: Text('날짜', style: _labelStyle)),
                   const SizedBox(width: 12),
                   Expanded(
                     child: CustomTextField(
@@ -269,14 +209,11 @@ class _MyEventSummaryEditViewState extends State<MyEventSummaryEditView> {
                         controller: _dateController,
                         focusNode: _dateFocus,
                         type: TextFieldType.date,
-                        isLarge: false,
                         readOnlyOverride: true,
                         onTap: _pickDate,
                         onClear: () {
                           _dateController.clear();
-                          context
-                              .read<MyEventDetailViewModel>()
-                              .updateDate(DateTime.now());
+                          vm.updateDate(DateTime.now());
                           setState(() {});
                         },
                       ),
@@ -290,28 +227,18 @@ class _MyEventSummaryEditViewState extends State<MyEventSummaryEditView> {
               Row(
                 children: [
                   const SizedBox(
-                    width: 100,
-                    child: Text(
-                      '화환',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Color(0xFF2A2928),
-                        fontFamily: 'Pretendard',
-                      ),
-                    ),
-                  ),
+                      width: 100, child: Text('화환', style: _labelStyle)),
                   const SizedBox(width: 12),
                   Expanded(
                     child: AddFriendButton(
                       label: '편집',
                       onTap: () {
-                        final vm = context.read<MyEventDetailViewModel>();
                         vm.initFlowerControllers();
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const MyEventFlowerEditPage(),
+                            builder: (_) =>
+                                MyEventFlowerEditPage(event: widget.event),
                           ),
                         );
                       },
@@ -328,8 +255,7 @@ class _MyEventSummaryEditViewState extends State<MyEventSummaryEditView> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 20, vertical: 12),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                        borderRadius: BorderRadius.circular(8)),
                   ),
                   onPressed: _onDeletePressed,
                   child: const Text('경조사 삭제하기'),
@@ -341,4 +267,38 @@ class _MyEventSummaryEditViewState extends State<MyEventSummaryEditView> {
       ),
     );
   }
+
+  Widget _buildEventTypeChip(String label) {
+    final isSelected = _selectedEventType == label;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => _onEventTypeSelected(label),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color:
+                isSelected ? const Color(0xFFC9885C) : const Color(0xFFF9F4EE),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              fontFamily: 'Pretendard',
+              color: isSelected ? Colors.white : const Color(0xFF2A2928),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static const TextStyle _labelStyle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w700,
+    color: Color(0xFF2A2928),
+    fontFamily: 'Pretendard',
+  );
 }

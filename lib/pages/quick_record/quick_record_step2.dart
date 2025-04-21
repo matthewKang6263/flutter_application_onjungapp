@@ -1,76 +1,62 @@
+// 📁 lib/pages/quick_record/quick_record_step2_page.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_application_onjungapp/pages/quick_record/quick_record_step3.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+
 import 'package:flutter_application_onjungapp/components/app_bar/custom_sub_app_bar.dart';
 import 'package:flutter_application_onjungapp/components/bar/step_progress_bar.dart';
-import 'package:flutter_application_onjungapp/components/bottom_buttons/bottom_fixed_button_container.dart';
-import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/black_fill_button.dart';
-import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/disabled_button.dart';
 import 'package:flutter_application_onjungapp/components/text_fields/custom_text_field.dart';
 import 'package:flutter_application_onjungapp/components/text_fields/text_field_config.dart';
 import 'package:flutter_application_onjungapp/components/text_fields/text_field_type.dart';
+import 'package:flutter_application_onjungapp/components/bottom_buttons/bottom_fixed_button_container.dart';
+import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/black_fill_button.dart';
+import 'package:flutter_application_onjungapp/components/bottom_buttons/widgets/disabled_button.dart';
 import 'package:flutter_application_onjungapp/components/bottom_sheet/date_picker_bottom_sheet.dart'
     as custom_picker;
 import 'package:flutter_application_onjungapp/components/bottom_sheet/events_select_bottom_sheet.dart';
 import 'package:flutter_application_onjungapp/models/enums/event_type.dart';
-import 'package:flutter_application_onjungapp/pages/quick_record/quick_record_step3.dart';
 import 'package:flutter_application_onjungapp/viewmodels/quick_record/quick_record_view_model.dart';
-import 'package:provider/provider.dart';
 
-class QuickRecordStep2Page extends StatefulWidget {
-  final DateTime? initialDate;
-
-  const QuickRecordStep2Page({super.key, this.initialDate});
+/// 🗓 빠른 기록 Step2: 경조사 종류 & 날짜 선택
+class QuickRecordStep2Page extends ConsumerStatefulWidget {
+  const QuickRecordStep2Page({super.key});
 
   @override
-  State<QuickRecordStep2Page> createState() => _QuickRecordStep2PageState();
+  ConsumerState<QuickRecordStep2Page> createState() =>
+      _QuickRecordStep2PageState();
 }
 
-class _QuickRecordStep2PageState extends State<QuickRecordStep2Page> {
-  final TextEditingController eventController = TextEditingController();
-  final TextEditingController dateController = TextEditingController();
-
-  /// ✅ 다음 프레임에서 강제 포커스 해제 (키보드 숨기기)
-  void forceUnfocus() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      FocusScope.of(context).unfocus();
-    });
-  }
+class _QuickRecordStep2PageState extends ConsumerState<QuickRecordStep2Page> {
+  final _eventCtrl = TextEditingController();
+  final _dateCtrl = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    final state = ref.read(quickRecordViewModelProvider);
 
-    final vm = context.read<QuickRecordViewModel>();
-
-    if (widget.initialDate != null) {
-      vm.selectDate(widget.initialDate);
-      dateController.text = _formatDate(widget.initialDate!);
-    } else if (vm.selectedDate != null) {
-      dateController.text = _formatDate(vm.selectedDate!);
+    // 기존 선택값 반영
+    if (state.eventType != null) {
+      _eventCtrl.text = state.eventType!.label;
     }
-
-    if (vm.selectedEventType != null) {
-      eventController.text = vm.selectedEventType!.label;
+    if (state.date != null) {
+      _dateCtrl.text = DateFormat('yyyy년 M월 d일 (E)', 'ko').format(state.date!);
     }
   }
 
   @override
   void dispose() {
-    eventController.dispose();
-    dateController.dispose();
+    _eventCtrl.dispose();
+    _dateCtrl.dispose();
     super.dispose();
-  }
-
-  String _formatDate(DateTime date) {
-    final formatter = DateFormat('yyyy년 M월 d일 (E)', 'ko');
-    return formatter.format(date);
   }
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<QuickRecordViewModel>();
-    final isNextEnabled =
-        vm.selectedEventType != null && vm.selectedDate != null;
+    final state = ref.watch(quickRecordViewModelProvider);
+    final vm = ref.read(quickRecordViewModelProvider.notifier);
+    final canNext = state.eventType != null && state.date != null;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -88,55 +74,39 @@ class _QuickRecordStep2PageState extends State<QuickRecordStep2Page> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        '참석한 경조사와 날짜를',
+                        '참석한 경조사와 날짜를 알려주세요.',
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w700,
-                          height: 1.36,
-                          fontFamily: 'Pretendard',
-                          color: Color(0xFF2A2928),
-                        ),
-                      ),
-                      const Text(
-                        '알려주세요.',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          height: 1.36,
-                          fontFamily: 'Pretendard',
-                          color: Color(0xFF2A2928),
                         ),
                       ),
                       const SizedBox(height: 24),
                       const Text(
-                        '경조사',
+                        '경조사 종류',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          fontFamily: 'Pretendard',
                         ),
                       ),
                       const SizedBox(height: 8),
                       CustomTextField(
                         config: TextFieldConfig(
-                          controller: eventController,
+                          controller: _eventCtrl,
                           type: TextFieldType.event,
                           readOnlyOverride: true,
-                          showCursorOverride: false,
                           onTap: () async {
                             await showEventsSelectBottomSheet(
                               context: context,
-                              currentValue: vm.selectedEventType,
-                              onSelected: (value) {
-                                vm.selectEventType(value);
-                                eventController.text = value?.label ?? '';
-                                forceUnfocus();
+                              currentValue: state.eventType,
+                              onSelected: (evt) {
+                                vm.selectEventType(evt);
+                                _eventCtrl.text = evt?.label ?? '';
                               },
                             );
                           },
                           onClear: () {
                             vm.selectEventType(null);
-                            eventController.clear();
+                            _eventCtrl.clear();
                           },
                         ),
                       ),
@@ -146,52 +116,47 @@ class _QuickRecordStep2PageState extends State<QuickRecordStep2Page> {
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
-                          fontFamily: 'Pretendard',
                         ),
                       ),
                       const SizedBox(height: 8),
                       CustomTextField(
                         config: TextFieldConfig(
-                          controller: dateController,
+                          controller: _dateCtrl,
                           type: TextFieldType.date,
                           readOnlyOverride: true,
-                          showCursorOverride: false,
                           onTap: () async {
-                            final pickedDate =
+                            final sel =
                                 await custom_picker.showDatePickerBottomSheet(
                               context: context,
                               mode: custom_picker.DatePickerMode.full,
-                              initialDate: vm.selectedDate,
+                              initialDate: state.date,
                             );
-                            if (pickedDate != null) {
-                              vm.selectDate(pickedDate);
-                              dateController.text = _formatDate(pickedDate);
-                              forceUnfocus();
+                            if (sel != null) {
+                              vm.selectDate(sel);
+                              _dateCtrl.text =
+                                  DateFormat('yyyy년 M월 d일 (E)', 'ko')
+                                      .format(sel);
                             }
                           },
                           onClear: () {
                             vm.selectDate(null);
-                            dateController.clear();
+                            _dateCtrl.clear();
                           },
                         ),
                       ),
-                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
               ),
               BottomFixedButtonContainer(
-                child: isNextEnabled
+                child: canNext
                     ? BlackFillButton(
                         text: '다음',
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const QuickRecordStep3Page(),
-                            ),
-                          );
-                        },
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const QuickRecordStep3Page()),
+                        ),
                       )
                     : const DisabledButton(text: '다음'),
               ),

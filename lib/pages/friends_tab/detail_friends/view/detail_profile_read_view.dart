@@ -5,8 +5,8 @@ import 'package:flutter_application_onjungapp/components/dividers/thin_divider.d
 import 'package:flutter_application_onjungapp/components/tag_label.dart';
 import 'package:flutter_application_onjungapp/models/enums/relation_type.dart';
 
-/// 📄 친구 상세 프로필 - 읽기 모드 뷰
-/// - 이름, 전화번호, 관계, 메모를 단순히 표시만 함
+/// 📄 친구 상세 프로필 - 읽기 전용 뷰
+///  이름, 전화번호, 관계, 메모만 표시
 class FriendsDetailProfileReadView extends StatelessWidget {
   final String name;
   final String phone;
@@ -27,23 +27,28 @@ class FriendsDetailProfileReadView extends StatelessWidget {
       children: [
         const SizedBox(height: 24),
 
-        // 🔹 이름
-        _buildRowWithDivider(label: '이름', child: _buildStaticText(name)),
+        // ── 이름
+        _buildRowWithDivider(
+          label: '이름',
+          child: _buildStaticText(name),
+        ),
 
-        // 🔹 전화번호
-        _buildRowWithDivider(label: '전화번호', child: _buildStaticText(phone)),
+        // ── 전화번호
+        _buildRowWithDivider(
+          label: '전화번호',
+          child: _buildStaticText(phone),
+        ),
 
-        // 🔹 관계
+        // ── 관계
         _buildRowWithDivider(
           label: '관계',
-          centerLabel: false,
           child: Align(
             alignment: Alignment.centerLeft,
             child: TagLabel.fromRelationType(relation),
           ),
         ),
 
-        // 🔹 메모
+        // ── 메모
         _buildRowWithDivider(
           label: '메모',
           alignTop: true,
@@ -54,12 +59,11 @@ class FriendsDetailProfileReadView extends StatelessWidget {
     );
   }
 
-  /// 🔹 공통 행 구성 + 구분선
+  /// 공통 행 + 구분선 위젯
   Widget _buildRowWithDivider({
     required String label,
     required Widget child,
     bool alignTop = false,
-    bool centerLabel = false,
     bool showDivider = true,
   }) {
     return Column(
@@ -80,7 +84,6 @@ class FriendsDetailProfileReadView extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                     fontFamily: 'Pretendard',
                   ),
-                  textAlign: centerLabel ? TextAlign.center : TextAlign.start,
                 ),
               ),
               const SizedBox(width: 16),
@@ -97,34 +100,28 @@ class FriendsDetailProfileReadView extends StatelessWidget {
     );
   }
 
-  /// 🔹 단일 텍스트 표시용
+  /// 단일 행 텍스트
   Widget _buildStaticText(String value) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        value,
-        style: const TextStyle(
-          color: Color(0xFF2A2928),
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-          fontFamily: 'Pretendard',
-        ),
+    return Text(
+      value,
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w500,
+        fontFamily: 'Pretendard',
+        color: Color(0xFF2A2928),
       ),
     );
   }
 
-  /// 🔹 메모용 멀티라인 텍스트 표시용
+  /// 멀티라인 메모 텍스트
   Widget _buildMultiLineText(String value) {
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Text(
-        value,
-        style: const TextStyle(
-          color: Color(0xFF2A2928),
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
-          fontFamily: 'Pretendard',
-        ),
+    return Text(
+      value,
+      style: const TextStyle(
+        fontSize: 16,
+        fontWeight: FontWeight.w500,
+        fontFamily: 'Pretendard',
+        color: Color(0xFF2A2928),
       ),
     );
   }

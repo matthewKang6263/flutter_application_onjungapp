@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_application_onjungapp/components/dividers/thick_divider.dart';
 import 'package:flutter_application_onjungapp/components/dividers/thin_divider.dart';
@@ -7,9 +8,8 @@ import 'package:flutter_application_onjungapp/models/my_event_model.dart';
 import 'package:flutter_application_onjungapp/pages/my_events_tab/my_event_detail/widgets/my_event_ledger_edit_list_item.dart';
 import 'package:flutter_application_onjungapp/pages/search/search_ledger_person_page.dart';
 import 'package:flutter_application_onjungapp/viewmodels/my_events_tab/my_event_detail_view_model.dart';
-import 'package:provider/provider.dart';
 
-class MyEventLedgerEditView extends StatefulWidget {
+class MyEventLedgerEditView extends ConsumerStatefulWidget {
   final MyEvent event;
   final void Function(Set<String>) onSelectionChanged;
 
@@ -20,22 +20,23 @@ class MyEventLedgerEditView extends StatefulWidget {
   });
 
   @override
-  State<MyEventLedgerEditView> createState() => _MyEventLedgerEditViewState();
+  ConsumerState<MyEventLedgerEditView> createState() =>
+      _MyEventLedgerEditViewState();
 }
 
-class _MyEventLedgerEditViewState extends State<MyEventLedgerEditView> {
-  late Set<String> selectedRecordIds;
+class _MyEventLedgerEditViewState extends ConsumerState<MyEventLedgerEditView> {
+  late Set<String> selectedRecordIds = {};
 
   @override
   void initState() {
     super.initState();
-
-    // 🔹 초기 선택값은 ViewModel에서 불러온 records 기준으로 설정
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final records = context.read<MyEventDetailViewModel>().records;
-      selectedRecordIds = records.map((r) => r.id).toSet();
+      final records =
+          ref.read(myEventDetailViewModelProvider(widget.event)).records;
+      setState(() {
+        selectedRecordIds = records.map((r) => r.id).toSet();
+      });
       widget.onSelectionChanged(selectedRecordIds);
-      setState(() {}); // 리스트 UI 갱신
     });
   }
 
@@ -50,20 +51,18 @@ class _MyEventLedgerEditViewState extends State<MyEventLedgerEditView> {
     });
   }
 
-  void _toggleAllSelection() {
-    final records = context.read<MyEventDetailViewModel>().records;
-
+  void _toggleAllSelection(List<String> allIds) {
     setState(() {
-      if (selectedRecordIds.length == records.length) {
+      if (selectedRecordIds.length == allIds.length) {
         selectedRecordIds.clear();
       } else {
-        selectedRecordIds = records.map((r) => r.id).toSet();
+        selectedRecordIds = allIds.toSet();
       }
       widget.onSelectionChanged(selectedRecordIds);
     });
   }
 
-  void _openSearchPage() async {
+  void _openSearchPage(List<String> allIds) async {
     final updated = await Navigator.push<Set<String>>(
       context,
       MaterialPageRoute(
@@ -85,14 +84,14 @@ class _MyEventLedgerEditViewState extends State<MyEventLedgerEditView> {
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<MyEventDetailViewModel>();
-    final records = vm.records;
-    final friends = vm.friends;
+    final state = ref.watch(myEventDetailViewModelProvider(widget.event));
+    final records = state.records;
+    final friends = state.friends;
     final isAllSelected = selectedRecordIds.length == records.length;
+    final allRecordIds = records.map((r) => r.id).toList();
 
     return Column(
       children: [
-        // 🔹 상단 상태 텍스트 + 검색 버튼
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: SizedBox(
@@ -110,7 +109,7 @@ class _MyEventLedgerEditViewState extends State<MyEventLedgerEditView> {
                   ),
                 ),
                 GestureDetector(
-                  onTap: _openSearchPage,
+                  onTap: () => _openSearchPage(allRecordIds),
                   child: SvgPicture.asset(
                     'assets/icons/search.svg',
                     width: 24,
@@ -122,10 +121,7 @@ class _MyEventLedgerEditViewState extends State<MyEventLedgerEditView> {
             ),
           ),
         ),
-
         const ThickDivider(),
-
-        // 🔸 리스트 헤더 + Divider
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
@@ -168,7 +164,7 @@ class _MyEventLedgerEditViewState extends State<MyEventLedgerEditView> {
                         mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           GestureDetector(
-                            onTap: _toggleAllSelection,
+                            onTap: () => _toggleAllSelection(allRecordIds),
                             child: Row(
                               children: [
                                 Text(
@@ -201,8 +197,6 @@ class _MyEventLedgerEditViewState extends State<MyEventLedgerEditView> {
             ],
           ),
         ),
-
-        // 🔹 리스트 영역
         Expanded(
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16),

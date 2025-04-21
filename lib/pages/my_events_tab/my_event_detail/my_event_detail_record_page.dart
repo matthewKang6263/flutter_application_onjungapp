@@ -19,7 +19,7 @@ import 'package:flutter_application_onjungapp/models/event_record_model.dart';
 import 'package:flutter_application_onjungapp/models/my_event_model.dart';
 import 'package:flutter_application_onjungapp/models/friend_model.dart';
 import 'package:flutter_application_onjungapp/repositories/event_record_repository.dart';
-import 'package:flutter_application_onjungapp/utils/input_formatters.dart';
+import 'package:flutter_application_onjungapp/utils/number_formats.dart';
 import 'package:intl/intl.dart';
 
 class MyEventDetailRecordPage extends StatefulWidget {
@@ -86,7 +86,7 @@ class _MyEventDetailRecordPageState extends State<MyEventDetailRecordPage> {
       widget.records[_currentIndex] = updated;
 
       // 🔥 Firestore 업데이트
-      await EventRecordRepository().updateEventRecord(updated);
+      await EventRecordRepository().update(updated);
     } catch (e) {
       print('🚨 저장 중 오류: $e');
     }

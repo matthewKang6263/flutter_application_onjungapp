@@ -1,8 +1,7 @@
-// 📁 lib/pages/record/views/detail_record_edit_view.dart
-
+// 📁 lib/pages/detail_record/view/detail_record_edit_view.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:provider/provider.dart';
 
 import 'package:flutter_application_onjungapp/components/buttons/money_quick_add_button.dart';
 import 'package:flutter_application_onjungapp/components/buttons/selectable_chip_button.dart';
@@ -11,31 +10,27 @@ import 'package:flutter_application_onjungapp/components/text_fields/custom_text
 import 'package:flutter_application_onjungapp/components/text_fields/text_field_config.dart';
 import 'package:flutter_application_onjungapp/components/text_fields/text_field_type.dart';
 import 'package:flutter_application_onjungapp/components/bottom_sheet/date_picker_bottom_sheet.dart'
-    as custom;
+    as custom_picker;
 import 'package:flutter_application_onjungapp/viewmodels/detail_record/detail_record_view_model.dart';
 
-/// 📄 상세 내역 편집 모드 뷰 (포커스 복귀 방지까지 포함한 최종 버전)
-class DetailRecordEditView extends StatefulWidget {
-  const DetailRecordEditView({super.key});
+/// 📄 상세 내역 편집 모드 뷰
+class DetailRecordEditView extends ConsumerWidget {
+  final String recordId;
+  const DetailRecordEditView({super.key, required this.recordId});
 
   @override
-  State<DetailRecordEditView> createState() => _DetailRecordEditViewState();
-}
+  Widget build(BuildContext context, WidgetRef ref) {
+    final vm = ref.watch(detailRecordViewModelProvider(recordId));
 
-class _DetailRecordEditViewState extends State<DetailRecordEditView> {
-  @override
-  void initState() {
-    super.initState();
-    // ✅ context는 initState에서 직접 사용 불가하므로 다음 프레임에서 실행
+    // 컨텍스트 세팅 (포커스용)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final viewModel = context.read<DetailRecordViewModel>();
-      viewModel.setContext(context); // context 저장 (포커스 해제용)
+      vm.setContext(context);
     });
-  }
 
-  @override
-  Widget build(BuildContext context) {
-    final viewModel = context.watch<DetailRecordViewModel>();
+    // 데이터 로딩 중
+    if (vm.record == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -47,196 +42,57 @@ class _DetailRecordEditViewState extends State<DetailRecordEditView> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 24),
-
-                  /// 🔸 이름 + 관계 + 금액 필드
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              viewModel.name,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w700,
-                                fontFamily: 'Pretendard',
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFFDF3F2),
-                                borderRadius: BorderRadius.circular(1000),
-                              ),
-                              child: Text(
-                                viewModel.relation,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w500,
-                                  fontFamily: 'Pretendard',
-                                  color: Color(0xFFC9747D),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        CustomTextField(
-                          config: TextFieldConfig(
-                            controller: viewModel.amountController,
-                            focusNode: viewModel.amountFocus,
-                            type: TextFieldType.amount,
-                            isLarge: false,
-                            onChanged: (_) => viewModel.notify(),
-                            onClear: () {
-                              viewModel.amountController.clear();
-                              viewModel.notify();
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            for (final amount in [10000, 50000, 100000, 500000])
-                              Expanded(
-                                child: Padding(
-                                  padding: EdgeInsets.only(
-                                      right: amount == 500000 ? 0 : 8),
-                                  child: MoneyQuickAddButton(
-                                    label: '+${amount ~/ 10000}만',
-                                    onTap: () => viewModel.addAmount(amount),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
+                  _buildHeader(vm),
                   const SizedBox(height: 12),
-
-                  /// 🔸 구분
-                  _buildEditSection(
+                  _buildAmountField(vm),
+                  const SizedBox(height: 12),
+                  _buildQuickAddButtons(vm),
+                  const ThinDivider(),
+                  _buildSection(
                     label: '구분',
-                    child: _buildChipRow(['보냄', '받음'], viewModel.direction,
-                        viewModel.setDirection),
-                    centerLabel: true,
+                    child:
+                        _chipRow(['보냄', '받음'], vm.direction, vm.setDirection),
                   ),
                   const ThinDivider(),
-
-                  /// 🔸 경조사
-                  _buildEditSection(
+                  _buildSection(
                     label: '경조사',
-                    child: Column(
-                      children: [
-                        _buildChipRow(['결혼식', '돌잔치', '장례식'],
-                            viewModel.eventType, viewModel.setEventType),
-                        const SizedBox(height: 8),
-                        _buildChipRow(['생일', '명절', '기타'], viewModel.eventType,
-                            viewModel.setEventType),
-                      ],
-                    ),
-                    centerLabel: true,
+                    child: _eventTypeChips(vm),
                   ),
                   const ThinDivider(),
-
-                  /// 🔸 날짜
-                  _buildEditSection(
+                  _buildSection(
                     label: '날짜',
-                    child: Stack(
-                      alignment: Alignment.centerRight,
-                      children: [
-                        GestureDetector(
-                          onTap: () async {
-                            final selected =
-                                await custom.showDatePickerBottomSheet(
-                              context: context,
-                              mode: custom.DatePickerMode.full,
-                            );
-                            if (selected != null) {
-                              // ✅ 포커스가 자동으로 돌아오는 걸 방지하기 위해 다음 프레임에서 unfocus 처리
-                              Future.delayed(Duration.zero, () {
-                                viewModel.unfocusAllFields();
-                              });
-                            }
-                          },
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 12),
-                            decoration: BoxDecoration(
-                              border:
-                                  Border.all(color: const Color(0xFFE9E5E1)),
-                              borderRadius: BorderRadius.circular(8),
-                              color: Colors.white,
-                            ),
-                            child: Text(
-                              viewModel.dateText.isNotEmpty
-                                  ? viewModel.dateText
-                                  : '날짜를 선택해 주세요',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                                fontFamily: 'Pretendard',
-                                color: viewModel.dateText.isNotEmpty
-                                    ? const Color(0xFF2A2928)
-                                    : const Color(0xFFB5B1AA),
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (viewModel.dateText.isNotEmpty)
-                          IconButton(
-                            icon: SvgPicture.asset('assets/icons/delete.svg'),
-                            onPressed: () => viewModel.clearDate(),
-                          ),
-                      ],
-                    ),
-                    centerLabel: true,
+                    child: _datePickerField(context, vm),
                   ),
                   const ThinDivider(),
-
-                  /// 🔸 수단
-                  _buildEditSection(
+                  _buildSection(
                     label: '수단',
-                    child: _buildChipRow(['현금', '이체', '선물'], viewModel.method,
-                        viewModel.setMethod),
-                    centerLabel: true,
+                    child:
+                        _chipRow(['현금', '이체', '선물'], vm.method, vm.setMethod),
                   ),
                   const ThinDivider(),
-
-                  /// 🔸 참석 여부
-                  _buildEditSection(
+                  _buildSection(
                     label: '참석 여부',
-                    child: _buildChipRow(['참석', '미참석'], viewModel.attendance,
-                        viewModel.setAttendance),
-                    centerLabel: true,
+                    child: _chipRow(
+                        ['참석', '미참석'], vm.attendance, vm.setAttendance),
                   ),
                   const ThinDivider(),
-
-                  /// 🔸 메모
-                  _buildEditSection(
+                  _buildSection(
                     label: '메모',
                     child: CustomTextField(
                       config: TextFieldConfig(
-                        controller: viewModel.memoController,
-                        focusNode: viewModel.memoFocus,
+                        controller: vm.memoController,
+                        focusNode: vm.memoFocus,
                         type: TextFieldType.memo,
                         isLarge: false,
-                        onChanged: (_) => viewModel.notify(),
+                        onChanged: (_) => vm.notify(),
                         onClear: () {
-                          viewModel.memoController.clear();
-                          viewModel.notify();
+                          vm.memoController.clear();
+                          vm.notify();
                         },
                       ),
                     ),
+                    centerLabel: true,
                   ),
-
                   const SizedBox(height: 24),
                 ],
               ),
@@ -247,8 +103,163 @@ class _DetailRecordEditViewState extends State<DetailRecordEditView> {
     );
   }
 
-  /// 🔹 라벨 + 필드 한 줄 묶음
-  Widget _buildEditSection({
+  // ── 헤더: 이름 + 관계 ─────────────────────────
+  Widget _buildHeader(DetailRecordViewModel vm) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Text(
+            vm.name,
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(width: 4),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFDF3F2),
+              borderRadius: BorderRadius.circular(1000),
+            ),
+            child: Text(
+              vm.relation,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: Color(0xFFC9747D),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── 금액 입력 필드 ─────────────────────────
+  Widget _buildAmountField(DetailRecordViewModel vm) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: CustomTextField(
+        config: TextFieldConfig(
+          controller: vm.amountController,
+          focusNode: vm.amountFocus,
+          type: TextFieldType.amount,
+          isLarge: false,
+          onChanged: (_) => vm.notify(),
+          onClear: () {
+            vm.amountController.clear();
+            vm.notify();
+          },
+        ),
+      ),
+    );
+  }
+
+  // ── 빠른 금액 추가 버튼 ────────────────────────
+  Widget _buildQuickAddButtons(DetailRecordViewModel vm) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [10000, 50000, 100000, 500000].map((amt) {
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(right: amt == 500000 ? 0 : 8),
+              child: MoneyQuickAddButton(
+                label: '+${amt ~/ 10000}만',
+                onTap: () => vm.addAmount(amt),
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  // ── 칩 옵션 행 생성 ─────────────────────────
+  Widget _chipRow(
+    List<String> options,
+    String current,
+    Function(String) onTap,
+  ) {
+    return Row(
+      children: options.map((opt) {
+        return Expanded(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: SelectableChipButton(
+              label: opt,
+              isSelected: current == opt,
+              onTap: () => onTap(opt),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  // ── 이벤트 타입 칩 ─────────────────────────
+  Widget _eventTypeChips(DetailRecordViewModel vm) {
+    const top = ['결혼식', '돌잔치', '장례식'];
+    const bottom = ['생일', '명절', '기타'];
+    return Column(
+      children: [
+        _chipRow(top, vm.eventType, vm.setEventType),
+        const SizedBox(height: 8),
+        _chipRow(bottom, vm.eventType, vm.setEventType),
+      ],
+    );
+  }
+
+  // ── 날짜 선택 필드 ─────────────────────────
+  Widget _datePickerField(BuildContext context, DetailRecordViewModel vm) {
+    // intl 포맷: yyyy년 M월 d일
+    final dateText = vm.dateText.isNotEmpty ? vm.dateText : '날짜를 선택해 주세요';
+
+    return Stack(
+      alignment: Alignment.centerRight,
+      children: [
+        GestureDetector(
+          onTap: () async {
+            final picked = await custom_picker.showDatePickerBottomSheet(
+              context: context,
+              mode: custom_picker.DatePickerMode.full,
+              initialDate: vm.dateValue,
+            );
+            if (picked != null) {
+              vm.setDate(picked);
+              Future.microtask(vm.unfocusAllFields);
+            }
+          },
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFFE9E5E1)),
+              borderRadius: BorderRadius.circular(8),
+              color: Colors.white,
+            ),
+            child: Text(
+              dateText,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+                color: vm.dateText.isNotEmpty
+                    ? const Color(0xFF2A2928)
+                    : const Color(0xFFB5B1AA),
+              ),
+            ),
+          ),
+        ),
+        if (vm.dateText.isNotEmpty)
+          IconButton(
+            icon: SvgPicture.asset('assets/icons/delete.svg'),
+            onPressed: vm.clearDate,
+          ),
+      ],
+    );
+  }
+
+  // ── 섹션 레이아웃 공통 ───────────────────────
+  Widget _buildSection({
     required String label,
     required Widget child,
     bool centerLabel = false,
@@ -274,28 +285,6 @@ class _DetailRecordEditViewState extends State<DetailRecordEditView> {
           Expanded(child: child),
         ],
       ),
-    );
-  }
-
-  /// 🔹 칩 버튼 묶음
-  Widget _buildChipRow(
-    List<String> options,
-    String selected,
-    Function(String) onTap,
-  ) {
-    return Row(
-      children: options.map((option) {
-        return Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: SelectableChipButton(
-              label: option,
-              isSelected: selected == option,
-              onTap: () => onTap(option),
-            ),
-          ),
-        );
-      }).toList(),
     );
   }
 }

@@ -1,13 +1,15 @@
+// lib/components/app_bar/custom_main_app_bar.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
-/// 메인 앱바 위젯
-/// - 타이틀은 항상 왼쪽 정렬
-/// - 오른쪽에는 설정 아이콘 + (조건부) 편집 아이콘
+/// 🔹 메인 앱바 위젯
+/// - 타이틀은 왼쪽 정렬
+/// - 오른쪽에는 설정 아이콘 및 (조건부) 편집 아이콘 표시
 class CustomMainAppBar extends StatelessWidget implements PreferredSizeWidget {
-  final String title; // 타이틀 텍스트
-  final VoidCallback? onSettingsTap; // 설정 아이콘 콜백
-  final VoidCallback? onEditTap; // 편집 아이콘 콜백
+  final String title; // 앱바 제목
+  final VoidCallback? onSettingsTap; // 설정 아이콘 탭 콜백
+  final VoidCallback? onEditTap; // 편집 아이콘 탭 콜백
   final bool showEditIcon; // 편집 아이콘 표시 여부
   final Color backgroundColor; // 앱바 배경색
 
@@ -24,12 +26,12 @@ class CustomMainAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         color: backgroundColor,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            // 🔹 타이틀 (항상 왼쪽 정렬)
+            // ● 왼쪽 타이틀
             Text(
               title,
               style: const TextStyle(
@@ -39,11 +41,11 @@ class CustomMainAppBar extends StatelessWidget implements PreferredSizeWidget {
                 fontFamily: 'Pretendard',
               ),
             ),
-
-            // 🔹 오른쪽 아이콘들 (편집 아이콘 + 설정 아이콘)
+            // ● 오른쪽 아이콘 그룹
             Row(
               children: [
-                if (showEditIcon)
+                if (showEditIcon) ...[
+                  // ◻️ 편집 아이콘
                   GestureDetector(
                     onTap: onEditTap,
                     child: SvgPicture.asset(
@@ -52,8 +54,9 @@ class CustomMainAppBar extends StatelessWidget implements PreferredSizeWidget {
                       height: 24,
                     ),
                   ),
-                if (showEditIcon) const SizedBox(width: 16), // 아이콘 간격
-
+                  const SizedBox(width: 16),
+                ],
+                // ◻️ 설정 아이콘
                 GestureDetector(
                   onTap: onSettingsTap,
                   child: SvgPicture.asset(

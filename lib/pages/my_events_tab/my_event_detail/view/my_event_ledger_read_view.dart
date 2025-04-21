@@ -1,3 +1,5 @@
+// 📁 lib/pages/my_events_tab/my_event_detail/view/my_event_ledger_read_view.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_application_onjungapp/components/dividers/thick_divider.dart';
 import 'package:flutter_application_onjungapp/models/enums/attendance_type.dart';
@@ -6,24 +8,23 @@ import 'package:flutter_application_onjungapp/pages/my_events_tab/my_event_detai
 import 'package:flutter_application_onjungapp/pages/my_events_tab/my_event_detail/my_event_detail_record_page.dart';
 import 'package:flutter_application_onjungapp/pages/my_events_tab/my_event_detail/widgets/my_event_ledger_list_item.dart';
 import 'package:flutter_application_onjungapp/components/buttons/add_friend_button.dart';
+import 'package:flutter_application_onjungapp/utils/number_formats.dart';
 import 'package:flutter_application_onjungapp/viewmodels/my_events_tab/my_event_detail_view_model.dart';
-import 'package:provider/provider.dart';
-import 'package:flutter_application_onjungapp/utils/format_utils.dart'; // ✅ 금액 포맷 적용
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-class MyEventLedgerReadView extends StatelessWidget {
+class MyEventLedgerReadView extends ConsumerWidget {
   final MyEvent event;
 
   const MyEventLedgerReadView({super.key, required this.event});
 
   @override
-  Widget build(BuildContext context) {
-    final vm = context.watch<MyEventDetailViewModel>();
+  Widget build(BuildContext context, WidgetRef ref) {
+    final vm = ref.watch(myEventDetailViewModelProvider(event));
     final records = vm.records;
     final friends = vm.friends;
 
     return Column(
       children: [
-        // 🔹 상단 상태 문구 + 친구 추가 버튼
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: SizedBox(
@@ -57,10 +58,7 @@ class MyEventLedgerReadView extends StatelessWidget {
             ),
           ),
         ),
-
         const ThickDivider(),
-
-        // 🔸 리스트 헤더 + Divider
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Column(
@@ -119,8 +117,6 @@ class MyEventLedgerReadView extends StatelessWidget {
             ],
           ),
         ),
-
-        // 🔹 친구 목록 리스트
         Expanded(
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -136,7 +132,7 @@ class MyEventLedgerReadView extends StatelessWidget {
               return MyEventLedgerListItem(
                 friend: friend,
                 isAttending: record.attendance == AttendanceType.attended,
-                amount: formatCurrency(record.amount), // ✅ 금액 포맷 적용됨
+                amount: formatNumberWithComma(record.amount),
                 onTap: () {
                   Navigator.push(
                     context,

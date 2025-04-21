@@ -1,27 +1,22 @@
+// 📁 lib/pages/friends_tab/detail_friends/view/friends_detail_profile_edit_view.dart
+
 import 'package:flutter/material.dart';
-import 'package:flutter_application_onjungapp/components/buttons/selectable_chip_button.dart';
 import 'package:flutter_application_onjungapp/components/dividers/thin_divider.dart';
 import 'package:flutter_application_onjungapp/components/text_fields/custom_text_field.dart';
 import 'package:flutter_application_onjungapp/components/text_fields/text_field_config.dart';
 import 'package:flutter_application_onjungapp/components/text_fields/text_field_type.dart';
+import 'package:flutter_application_onjungapp/components/buttons/selectable_chip_button.dart';
 import 'package:flutter_application_onjungapp/models/enums/relation_type.dart';
 
-/// 📄 친구 상세 프로필 - 편집 모드 뷰 (2025-04 리팩토링 반영 버전)
+/// 📄 친구 상세 프로필 - 편집 모드 뷰
 class FriendsDetailProfileEditView extends StatelessWidget {
   final TextEditingController nameController;
   final TextEditingController phoneController;
   final TextEditingController memoController;
-
-  final FocusNode nameFocus;
-  final FocusNode phoneFocus;
-  final FocusNode memoFocus;
-
+  final FocusNode nameFocus, phoneFocus, memoFocus;
   final RelationType selectedRelation;
   final ValueChanged<RelationType> onRelationChanged;
-
-  final VoidCallback onNameClear;
-  final VoidCallback onPhoneClear;
-  final VoidCallback onMemoClear;
+  final VoidCallback onNameClear, onPhoneClear, onMemoClear;
 
   const FriendsDetailProfileEditView({
     super.key,
@@ -40,15 +35,15 @@ class FriendsDetailProfileEditView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final visibleRelationTypes = RelationType.values
-        .where((type) => type != RelationType.unset)
-        .toList();
+    // unset 타입 제외
+    final types =
+        RelationType.values.where((t) => t != RelationType.unset).toList();
 
     return Column(
       children: [
         const SizedBox(height: 24),
 
-        /// 🔸 이름
+        // ── 이름 입력
         _buildFieldSection(
           label: '이름',
           centerLabel: true,
@@ -65,7 +60,7 @@ class FriendsDetailProfileEditView extends StatelessWidget {
         ),
         const ThinDivider(),
 
-        /// 🔸 전화번호
+        // ── 전화번호 입력
         _buildFieldSection(
           label: '전화번호',
           centerLabel: true,
@@ -82,24 +77,22 @@ class FriendsDetailProfileEditView extends StatelessWidget {
         ),
         const ThinDivider(),
 
-        /// 🔸 관계
+        // ── 관계 선택
         _buildFieldSection(
           label: '관계',
-          centerLabel: false,
           child: Column(
             children: [
-              _buildChipRow(visibleRelationTypes.sublist(0, 3)),
+              _buildChipRow(types.sublist(0, 3)),
               const SizedBox(height: 8),
-              _buildChipRow(visibleRelationTypes.sublist(3)),
+              _buildChipRow(types.sublist(3)),
             ],
           ),
         ),
         const ThinDivider(),
 
-        /// 🔸 메모
+        // ── 메모 입력
         _buildFieldSection(
           label: '메모',
-          centerLabel: false,
           alignTop: true,
           child: CustomTextField(
             config: TextFieldConfig(
@@ -117,7 +110,7 @@ class FriendsDetailProfileEditView extends StatelessWidget {
     );
   }
 
-  /// 🔹 공통 필드 섹션 위젯 (타이틀 + 입력 필드)
+  /// 공통 입력 섹션
   Widget _buildFieldSection({
     required String label,
     required Widget child,
@@ -127,14 +120,11 @@ class FriendsDetailProfileEditView extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
-        crossAxisAlignment: alignTop
-            ? CrossAxisAlignment.start
-            : centerLabel
-                ? CrossAxisAlignment.center
-                : CrossAxisAlignment.start,
+        crossAxisAlignment:
+            alignTop ? CrossAxisAlignment.start : CrossAxisAlignment.center,
         children: [
           SizedBox(
-            width: 72, // 모든 타이틀의 시작점 고정
+            width: 72,
             child: Text(
               label,
               style: const TextStyle(
@@ -143,6 +133,7 @@ class FriendsDetailProfileEditView extends StatelessWidget {
                 fontFamily: 'Pretendard',
                 color: Color(0xFF2A2928),
               ),
+              textAlign: centerLabel ? TextAlign.center : TextAlign.start,
             ),
           ),
           const SizedBox(width: 20),
@@ -152,7 +143,7 @@ class FriendsDetailProfileEditView extends StatelessWidget {
     );
   }
 
-  /// 🔹 칩 버튼 가로 나열
+  /// 칩 버튼 가로 리스트
   Widget _buildChipRow(List<RelationType> types) {
     return Row(
       children: types.map((type) {

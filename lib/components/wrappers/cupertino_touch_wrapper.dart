@@ -1,9 +1,9 @@
+// lib/components/wrappers/cupertino_touch_wrapper.dart
+
 import 'package:flutter/material.dart';
 
-/// 🍎 iOS 스타일 터치 피드백을 주는 공통 Wrapper
-/// - 눌렀을 때 회색 배경 (F2F2F2)
-/// - 기본값: 전체 영역 터치 가능
-/// - iOS `InkWell` 대체용으로 사용
+/// 🍎 iOS 스타일 터치 피드백 래퍼
+/// - tap down 시 회색 배경(0xFFF2F2F2) 표시
 class CupertinoTouchWrapper extends StatefulWidget {
   final Widget child;
   final VoidCallback? onTap;
@@ -25,26 +25,21 @@ class CupertinoTouchWrapper extends StatefulWidget {
 }
 
 class _CupertinoTouchWrapperState extends State<CupertinoTouchWrapper> {
-  bool _isPressed = false;
+  bool _pressed = false;
 
-  void _setPressed(bool value) {
-    if (_isPressed != value) {
-      setState(() => _isPressed = value);
-    }
-  }
+  void _setPressed(bool v) => setState(() => _pressed = v);
 
   @override
   Widget build(BuildContext context) {
-    final decorated = AnimatedContainer(
+    final content = AnimatedContainer(
       duration: const Duration(milliseconds: 150),
       decoration: BoxDecoration(
-        color: _isPressed ? const Color(0xFFF2F2F2) : Colors.transparent,
-        borderRadius: widget.borderRadius,
-      ),
+          color: _pressed ? const Color(0xFFF2F2F2) : Colors.transparent,
+          borderRadius: widget.borderRadius),
       child: widget.child,
     );
 
-    return GestureDetector(
+    final wrapped = GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: widget.onTap,
       onLongPress: widget.onLongPress,
@@ -52,8 +47,10 @@ class _CupertinoTouchWrapperState extends State<CupertinoTouchWrapper> {
       onTapUp: (_) => _setPressed(false),
       onTapCancel: () => _setPressed(false),
       child: widget.padding != null
-          ? Padding(padding: widget.padding!, child: decorated)
-          : decorated,
+          ? Padding(padding: widget.padding!, child: content)
+          : content,
     );
+
+    return wrapped;
   }
 }

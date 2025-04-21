@@ -1,7 +1,7 @@
 // 📁 lib/pages/search/search_event_person_page.dart
-
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import 'package:flutter_application_onjungapp/components/app_bar/custom_sub_app_bar.dart';
 import 'package:flutter_application_onjungapp/components/text_fields/custom_text_field.dart';
 import 'package:flutter_application_onjungapp/components/text_fields/text_field_config.dart';
@@ -11,169 +11,128 @@ import 'package:flutter_application_onjungapp/pages/my_events_tab/widgets/my_eve
 import 'package:flutter_application_onjungapp/viewmodels/search/search_friend_view_model.dart';
 import 'package:flutter_application_onjungapp/viewmodels/auth/user_view_model.dart';
 
-class SearchEventPersonPage extends StatefulWidget {
+/// 👥 경조사 인원 검색 & 선택 페이지
+class SearchEventPersonPage extends ConsumerStatefulWidget {
   final Set<String> initialSelectedFriendIds;
   final void Function(Set<String>)? onComplete;
   final Set<String>? excludedIds;
 
   const SearchEventPersonPage({
-    Key? key,
+    super.key,
     required this.initialSelectedFriendIds,
     this.onComplete,
     this.excludedIds,
-  }) : super(key: key);
+  });
 
   @override
-  State<SearchEventPersonPage> createState() => _SearchEventPersonPageState();
+  ConsumerState<SearchEventPersonPage> createState() =>
+      _SearchEventPersonPageState();
 }
 
-class _SearchEventPersonPageState extends State<SearchEventPersonPage> {
-  final TextEditingController _controller = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
+class _SearchEventPersonPageState extends ConsumerState<SearchEventPersonPage> {
+  final _searchCtrl = TextEditingController();
+  final _focusNode = FocusNode();
 
-  late Set<String> _selectedSearchIds;
-  String _searchQuery = '';
+  late Set<String> _selectedIds;
+  String _query = '';
 
   @override
   void initState() {
     super.initState();
+    _selectedIds = {...widget.initialSelectedFriendIds};
 
-    _selectedSearchIds = Set<String>.from(widget.initialSelectedFriendIds);
-
-    final userId = context.read<UserViewModel>().uid;
-    if (userId != null) {
-      context.read<SearchFriendViewModel>().fetchFriends(userId);
+    final uid = ref.read(userViewModelProvider).uid;
+    if (uid != null) {
+      ref.read(searchFriendViewModelProvider.notifier).fetchFriends(uid);
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _searchCtrl.dispose();
     _focusNode.dispose();
     super.dispose();
   }
 
-  void _onSearchChanged(String query) {
-    setState(() {
-      _searchQuery = query;
-    });
-  }
+  void _onSearch(String q) => setState(() => _query = q);
 
-  void _toggleSelection(String friendId) {
+  void _toggle(String id) {
     setState(() {
-      if (_selectedSearchIds.contains(friendId)) {
-        _selectedSearchIds.remove(friendId);
-      } else {
-        _selectedSearchIds.add(friendId);
-      }
+      if (_selectedIds.contains(id))
+        _selectedIds.remove(id);
+      else
+        _selectedIds.add(id);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    final vm = context.watch<SearchFriendViewModel>();
-    final excludedIds = widget.excludedIds ?? {};
+    final state = ref.watch(searchFriendViewModelProvider);
+    final excluded = widget.excludedIds ?? {};
 
-    final availableFriends =
-        vm.friends.where((f) => !excludedIds.contains(f.id)).toList();
+    final available =
+        state.friends.where((f) => !excluded.contains(f.id)).toList();
+    final filtered = available.where((f) {
+      return f.name.toLowerCase().contains(_query.toLowerCase());
+    }).toList();
 
-    final filteredFriends = availableFriends
-        .where((f) => f.name.toLowerCase().contains(_searchQuery.toLowerCase()))
-        .toList();
-
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        backgroundColor: Colors.white,
-        appBar: const CustomSubAppBar(title: '검색'),
-        body: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Scaffold(
+      appBar: const CustomSubAppBar(title: '인원 검색'),
+      backgroundColor: Colors.white,
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Column(
           children: [
             const SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: CustomTextField(
                 config: TextFieldConfig(
-                  controller: _controller,
+                  controller: _searchCtrl,
                   focusNode: _focusNode,
                   type: TextFieldType.search,
                   readOnlyOverride: false,
-                  onTap: () {
-                    if (!_focusNode.hasFocus) {
-                      FocusScope.of(context).requestFocus(_focusNode);
-                    }
-                  },
+                  onChanged: _onSearch,
                   onClear: () {
-                    _controller.clear();
-                    _onSearchChanged('');
+                    _searchCtrl.clear();
+                    _onSearch('');
                   },
-                  onChanged: _onSearchChanged,
                 ),
               ),
             ),
             const SizedBox(height: 24),
-            if (_searchQuery.isNotEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Text(
-                  '검색 결과',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF888580),
-                    fontFamily: 'Pretendard',
-                  ),
-                ),
-              ),
-            if (_searchQuery.isNotEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 8),
-                child: Divider(
-                  color: Color(0xFFE9E5E1),
-                  height: 1,
-                  thickness: 1,
-                ),
-              ),
             Expanded(
-              child: vm.isLoading
+              child: state.isLoading
                   ? const Center(child: CircularProgressIndicator())
-                  : filteredFriends.isEmpty
+                  : filtered.isEmpty
                       ? const Center(
-                          child: Text(
-                            '검색 결과가 없습니다.',
-                            style: TextStyle(
-                              color: Color(0xFFB5B1AA),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              fontFamily: 'Pretendard',
-                            ),
-                          ),
+                          child: Text('검색 결과가 없습니다.'),
                         )
                       : ListView.separated(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
-                          itemCount: filteredFriends.length,
+                          itemCount: filtered.length,
                           separatorBuilder: (_, __) =>
-                              Container(height: 1, color: Color(0xFFE9E5E1)),
-                          itemBuilder: (_, index) {
-                            final friend = filteredFriends[index];
+                              const Divider(color: Color(0xFFE9E5E1)),
+                          itemBuilder: (ctx, i) {
+                            final friend = filtered[i];
+                            final selected = _selectedIds.contains(friend.id);
                             return MyEventFriendListItem(
                               friend: friend,
-                              isSelected:
-                                  _selectedSearchIds.contains(friend.id),
-                              onTap: () => _toggleSelection(friend.id),
+                              isSelected: selected,
+                              onTap: () => _toggle(friend.id),
                             );
                           },
                         ),
             ),
             SafeArea(
-              minimum: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+              minimum: const EdgeInsets.all(16),
               child: BlackFillButton(
                 text: '완료',
                 onTap: () {
                   if (widget.onComplete != null) {
-                    widget.onComplete!(_selectedSearchIds);
+                    widget.onComplete!(_selectedIds);
                   } else {
-                    Navigator.pop(context, _selectedSearchIds);
+                    Navigator.pop(context, _selectedIds);
                   }
                 },
               ),

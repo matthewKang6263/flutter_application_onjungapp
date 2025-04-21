@@ -2,9 +2,9 @@
 
 import 'package:flutter/material.dart';
 
-/// 🔹 공통 입력 필드 컨트롤러
-/// - 각 입력 필드에 대한 TextEditingController, FocusNode 관리
-/// - dispose 처리가 필요한 필드들을 일괄 관리
+/// 🔹 단일 입력 필드 컨트롤러
+/// - TextEditingController와 FocusNode를 묶어 관리
+/// - clear(), dispose() 등 편의 메서드 제공
 class InputFieldController {
   final TextEditingController controller;
   final FocusNode focusNode;
@@ -13,42 +13,42 @@ class InputFieldController {
       : controller = TextEditingController(),
         focusNode = FocusNode();
 
-  /// 입력값 반환
+  /// ▪︎ 현재 텍스트 반환
   String get text => controller.text;
 
-  /// 입력값 초기화
+  /// ▪︎ 텍스트 초기화
   void clear() => controller.clear();
 
-  /// 포커스 여부 반환
+  /// ▪︎ 포커스 상태
   bool get hasFocus => focusNode.hasFocus;
 
-  /// 리소스 해제
+  /// ▪︎ 리소스 해제
   void dispose() {
     controller.dispose();
     focusNode.dispose();
   }
 }
 
-/// 🔹 여러 필드를 사용하는 경우를 위한 그룹 컨트롤러 예시
-/// - 필요 시 페이지 단위로 커스텀 컨트롤러 정의 가능
+/// 🔹 친구 프로필 페이지용 필드 그룹 컨트롤러
 class FriendProfileFieldController {
-  final InputFieldController nameField = InputFieldController();
-  final InputFieldController phoneField = InputFieldController();
-  final InputFieldController memoField = InputFieldController();
+  final InputFieldController name = InputFieldController();
+  final InputFieldController phone = InputFieldController();
+  final InputFieldController memo = InputFieldController();
 
   void dispose() {
-    nameField.dispose();
-    phoneField.dispose();
-    memoField.dispose();
+    name.dispose();
+    phone.dispose();
+    memo.dispose();
   }
 }
 
+/// 🔹 이벤트 기록 입력 페이지용 필드 그룹 컨트롤러
 class EventRecordFieldController {
-  final InputFieldController amountField = InputFieldController();
-  final InputFieldController memoField = InputFieldController();
+  final InputFieldController amount = InputFieldController();
+  final InputFieldController memo = InputFieldController();
 
   void dispose() {
-    amountField.dispose();
-    memoField.dispose();
+    amount.dispose();
+    memo.dispose();
   }
 }

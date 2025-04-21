@@ -2,7 +2,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_application_onjungapp/components/wrappers/cupertino_touch_wrapper.dart';
-import 'package:flutter_application_onjungapp/utils/date_utils.dart';
+import 'package:flutter_application_onjungapp/utils/date/date_formats.dart';
 
 /// 📦 내 경조사 카드 위젯
 /// - 전체 영역이 클릭 가능하며, 클릭 시 [onTap] 콜백 실행

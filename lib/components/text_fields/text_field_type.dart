@@ -1,26 +1,26 @@
-// 📁 lib/components/text_fields/text_field_type.dart
+// lib/components/text_fields/text_field_type.dart
 
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_application_onjungapp/utils/input_formatters.dart';
+import 'package:flutter_application_onjungapp/utils/%08formatters/currency_formatter.dart';
+import 'package:flutter_application_onjungapp/utils/%08formatters/memo_formatter.dart';
+import 'package:flutter_application_onjungapp/utils/%08formatters/name_formatter.dart';
+import 'package:flutter_application_onjungapp/utils/%08formatters/phone_formatter.dart';
 
-/// 🔹 텍스트 필드 타입 정의
-/// - 온정에서 사용하는 모든 입력 및 선택형 필드를 enum으로 구분
-/// - 입력 가능한 필드(name, phone 등)과 버튼형 선택 필드(event, date 등)를 구분하여 처리
+/// 🔹 입력 필드 타입 정의
 enum TextFieldType {
-  name, // 친구 이름 입력
+  name, // 이름 입력
   phone, // 전화번호 입력
   amount, // 금액 입력
-  memo, // 메모 입력 (멀티라인)
-  search, // 검색어 입력 (입력 가능하지만 주로 검색용 버튼 역할)
-  event, // 경조사 종류 선택 (입력 불가능, 버튼형 필드)
-  date, // 날짜 선택 (입력 불가능, 버튼형 필드)
-  eventTitle, // 경조사 제목 (직접 입력 가능, 내 경조사 탭에서 사용)
+  memo, // 메모 입력
+  search, // 검색어 입력
+  event, // 경조사 선택 (버튼형)
+  date, // 날짜 선택 (버튼형)
+  eventTitle, // 내 경조사 제목 입력
 }
 
-/// 🔸 TextFieldType 확장 메서드 정의
+/// 🔸 TextFieldType 확장 메서드
 extension TextFieldTypeExtension on TextFieldType {
-  /// UI 라벨 텍스트
+  /// ● UI 표시용 라벨 텍스트
   String get label {
     switch (this) {
       case TextFieldType.name:
@@ -42,7 +42,7 @@ extension TextFieldTypeExtension on TextFieldType {
     }
   }
 
-  /// 힌트 텍스트
+  /// ● 힌트 텍스트
   String get hintText {
     switch (this) {
       case TextFieldType.name:
@@ -64,20 +64,21 @@ extension TextFieldTypeExtension on TextFieldType {
     }
   }
 
-  /// 직접 입력 가능한 필드인지 여부
+  /// ● 직접 입력 가능 여부
   bool get isInputEnabled {
-    return this == TextFieldType.name ||
-        this == TextFieldType.phone ||
-        this == TextFieldType.amount ||
-        this == TextFieldType.memo ||
-        this == TextFieldType.search ||
-        this == TextFieldType.eventTitle;
+    switch (this) {
+      case TextFieldType.event:
+      case TextFieldType.date:
+        return false;
+      default:
+        return true;
+    }
   }
 
-  /// 멀티라인 허용 여부
+  /// ● 멀티라인 허용 여부
   bool get isMultiline => this == TextFieldType.memo;
 
-  /// 키보드 타입
+  /// ● 적합한 키보드 타입
   TextInputType get keyboardType {
     switch (this) {
       case TextFieldType.amount:
@@ -91,7 +92,7 @@ extension TextFieldTypeExtension on TextFieldType {
     }
   }
 
-  /// 입력 포맷터
+  /// ● 입력 포맷터 리스트
   List<TextInputFormatter> get inputFormatters {
     switch (this) {
       case TextFieldType.amount:
@@ -103,7 +104,7 @@ extension TextFieldTypeExtension on TextFieldType {
       case TextFieldType.name:
         return [NameInputFormatter()];
       default:
-        return []; // 기타 필드는 포맷터 없음
+        return [];
     }
   }
 }
